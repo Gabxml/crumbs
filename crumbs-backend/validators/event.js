@@ -33,7 +33,8 @@ const collaboratorIds = z
   .max(MAX_COLLABORATORS, `An event can be shared with at most ${MAX_COLLABORATORS} people`);
 
 const createEventSchema = z.strictObject({
-  title,
+  // Optional: an event can be opened blank and titled later.
+  title: title.or(z.literal("")).default(""),
   description: description.default(""),
   tags: tags.default([]),
   collaborators: collaboratorIds.default([]),
@@ -49,8 +50,8 @@ const updateEventSchema = atLeastOneField(
 );
 
 const statusSchema = z.strictObject({
-  status: z.enum(EVENT_STATUSES, {
-    error: `Status must be one of: ${EVENT_STATUSES.join(", ")}`,
+  status: z.enum(EVENT_STATUSES.filter((s) => s !== "new"), {
+    error: `Status must be one of: ${EVENT_STATUSES.filter((s) => s !== "new").join(", ")}`,
   }),
 });
 

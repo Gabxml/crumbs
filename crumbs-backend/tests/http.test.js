@@ -83,7 +83,6 @@ test("creating an event with bad data -> 400 with per-field errors", async () =>
   });
   assert.equal(status, 400);
   assert.equal(json.message, "Validation failed");
-  assert.deepEqual(json.fields.title, ["Title is required"]);
   assert.ok(json.fields.tags);
   // Events no longer start with widgets: they start with one empty row.
   assert.match(json.fields._[0], /Unrecognized key.*widgets/);

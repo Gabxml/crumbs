@@ -67,6 +67,7 @@ If the database name in that line is `crumbs`, the app refuses to start — that
 | `npm start` | Start the server |
 | `npm run dev` | Start with `node --watch`, restarts on file changes |
 | `npm run db:reset` | Empty the **sandbox** database |
+| `npm run refresh` | Recompute every event's card summary and search text in the sandbox (after an update that changes them) |
 | `npm run seed` | Fill the sandbox with sample events (`npm run seed -- you@email.com` seeds your own account) |
 | `npm test` | Run the automated tests (no database needed) |
 | `npm run smoke` | End-to-end check against a running server and the sandbox database |
@@ -122,7 +123,7 @@ An **event** is one card on the Collections page. It is made of **rows**, and ea
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/api/events` | Events I created plus events shared with me, recently edited first (`?page&limit`). Powers the Collections grid |
-| POST | `/api/events` | Create an event (one empty row, no widgets), optionally shared with friends (`collaborators: [userId]`) |
+| POST | `/api/events` | Open a new event: one empty row, no widgets. `title` is optional. With nothing in it the status is `new` (see below) |
 | GET | `/api/events/:id` | One event with its rows and all its widgets |
 | PATCH | `/api/events/:id` | Change `title`, `description` or `tags` |
 | DELETE | `/api/events/:id` | Creator only. Deletes the event, its widgets and its pictures for everyone |
@@ -167,7 +168,7 @@ Any widget type can be added to any row, any number of times (up to 30 widgets p
 | DELETE | `/api/widgets/:id/image` | Empty the widget; the widget itself stays |
 | POST | `/api/links/preview` | Look up a link (title, image, embed) without saving it. Body `{ "url": "..." }` |
 
-**Notes** hold text and a checklist together, always. **Image widgets** hold exactly one picture and have no thumbnail; the event card uses the first picture in display order as its `coverUrl`.
+**Notes** hold text and a checklist together, always. **Image widgets** hold exactly one picture and have no thumbnail; the first pictures in display order become the image tiles of the event card.
 
 ### Friends
 
@@ -189,7 +190,7 @@ All filters are optional and combine with AND.
 
 | Parameter | Example | Meaning |
 |---|---|---|
-| `q` | `trip budget` | Every word must appear in the title, description, tags, a row name, a notes widget or checklist item, a date label, a link, or a picture name |
+| `q` | `trip budget` | Every word must appear in the title, description, tags, a row name, a notes widget or checklist item, a date (as `2026-12-25`, the month name `december`, or the year `2026`), a date label, a link, or a picture name |
 | `scope` | `shared` | `all` (default), `mine` (I created) or `shared` (shared with me) |
 | `status` | `planned,done` | Any of these statuses |
 | `tags` | `school,work` | Has **all** of these tags |
@@ -200,6 +201,9 @@ All filters are optional and combine with AND.
 
 ### Business rules
 
+- **Blank events.** Opening a new event creates it with status `new`. It is not listed in Collections or Search. The first title, tag, description or widget turns it into a `draft` automatically. If the user leaves without adding anything the frontend deletes it (`DELETE /api/events/:id`); blank events still left after an hour are removed the next time that user loads `GET /api/events`.
+- **Card tiles.** Each event in a list carries `summary.tiles`: up to four tiles in the order date, note, image, link. A kind that is missing frees a slot, and free slots are filled with more pictures, then links, dates and notes. `summary.imageCount` is the "memories" count.
+- **Next statuses.** Each event carries `nextStatuses`, the statuses it can move to right now. Use it for the status dropdown, so impossible moves are never offered.
 - **Friends only.** An event can only be shared with people on the creator's friends list (`400` otherwise). At most 20 people per event.
 - **Status moves.** `draft` to `planned` or `archived`; `planned` to `draft`, `done` or `archived`; `done` to `planned` or `archived`; `archived` to `draft`. Anything else is `409`.
 - **Planning needs a date.** An event can only become `planned` once at least one date widget has a date.
@@ -216,22 +220,22 @@ All filters are optional and combine with AND.
 `POST /api/events`
 
 ```json
-{ "title": "Weekend Hike", "tags": ["Outdoors", "friends"], "collaborators": ["6650a1..."] }
+{}   // or { "title": "Weekend Hike", "tags": ["Outdoors"], "collaborators": ["6650a1..."] }
 ```
 
-`201 Created`: one empty row, no widgets.
+`201 Created`: one empty row, no widgets, status `new`.
 
 ```json
 {
   "event": {
     "id": "6650f1...",
     "title": "Weekend Hike",
-    "status": "draft",
+    "status": "new",
     "role": "owner",
     "owner": { "id": "6650a0...", "username": "jian" },
     "collaborators": [{ "id": "6650a1...", "username": "mika" }],
     "rows": [{ "id": "6650f2...", "name": "" }],
-    "summary": { "eventDate": null, "eventDates": [], "noteExcerpt": "", "imageCount": 0, "coverUrl": null, "linkCount": 0, "link": null }
+    "nextStatuses": [], "summary": { "eventDate": null, "eventDates": [], "imageCount": 0, "linkCount": 0, "tiles": [] }
   },
   "widgets": []
 }
@@ -242,7 +246,7 @@ All filters are optional and combine with AND.
 ```json
 {
   "widget": { "id": "6650f3...", "rowId": "6650f2...", "type": "notes", "order": 0, "body": "Start at 4:30 AM", "checklist": [{ "id": "...", "text": "Pack headlamps", "done": false }] },
-  "event": { "id": "6650f1...", "summary": { "noteExcerpt": "Start at 4:30 AM" } }
+  "event": { "id": "6650f1...", "status": "draft", "summary": { "tiles": [{ "type": "note", "text": "Start at 4:30 AM" }] } }
 }
 ```
 
@@ -282,7 +286,7 @@ config/uploads.js       upload folder, size and type limits
 models/                 User, Event, Widget (+ notes/image/date/link types), Friendship
 routes/                 auth, events, rows, widgets, links, friends, health
 validators/             Zod schemas for request bodies and query strings
-services/               business logic: access rules, friends, status rules, search,
+services/               business logic: access rules, friends, status rules, card tiles, search,
                         summaries, link previews, serializers, payload builders
 middleware/             auth, logger, 404, error handler, id check, uploads
 utils/                  dates, HttpError

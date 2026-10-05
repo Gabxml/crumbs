@@ -93,7 +93,7 @@ test("uploading a picture stores the file, serves it, and updates the event cove
   assert.equal(json.widget.image.filename, undefined); // disk name stays private
   assert.equal(json.widget.rowId, String(rowId));
   assert.equal(json.event.summary.imageCount, 1);
-  assert.equal(json.event.summary.coverUrl, json.widget.image.url);
+  assert.deepEqual(json.event.summary.tiles.find((t) => t.type === "image"), { type: "image", url: json.widget.image.url });
   assert.equal(filesOnDisk().length, 1);
 
   const served = await fetch(base + json.widget.image.url);
@@ -196,7 +196,7 @@ test("a notes widget holds text and a checklist at the same time; edits keep ite
   assert.equal(json.widget.checklist[1].done, false);
   assert.equal(json.widget.mode, undefined);
   assert.equal(json.widget.checklistPercent, undefined); // no progress report
-  assert.equal(json.event.summary.noteExcerpt, "Hello");
+  assert.equal(json.event.summary.tiles.find((t) => t.type === "note").text, "Hello");
 });
 
 test("changing only the text leaves the checklist alone, and the other way round", async () => {

@@ -1,5 +1,6 @@
 const Event = require("../models/Event");
 const { Widget } = require("../models/Widget");
+const { dateSearchText } = require("../utils/dates");
 
 // Widgets in display order: row by row (top to bottom), then left to right.
 function inDisplayOrder(event, widgets) {
@@ -21,33 +22,30 @@ function buildSummary(event, widgets) {
 
   const eventDates = dates.map((w) => w.date).sort(); // "YYYY-MM-DD" sorts as text
 
-  // Card preview: the first notes widget that has text, else the first
-  // checklist that has items.
-  const firstText = notes.find((w) => (w.body ?? "").trim());
-  const firstList = notes.find((w) => (w.checklist ?? []).length > 0);
-  const noteExcerpt = firstText
-    ? firstText.body.trim().slice(0, 140)
-    : firstList
-      ? firstList.checklist.map((item) => item.text).join(" · ").slice(0, 140)
-      : "";
-
-  const link = links[0];
+  // What the Collections card needs: a few notes, pictures and links.
+  const noteExcerpts = notes
+    .map((w) => (w.body ?? "").trim() || (w.checklist ?? []).map((item) => item.text).join(" · "))
+    .filter(Boolean)
+    .map((text) => text.slice(0, 140))
+    .slice(0, 3);
 
   const summary = {
     eventDate: eventDates[0] ?? null,
     eventDates,
-    noteExcerpt,
+    noteExcerpts,
     openChecklistItems: notes.reduce(
       (total, w) => total + (w.checklist ?? []).filter((item) => !item.done).length,
       0,
     ),
     imageCount: images.length,
-    coverUrl: images[0]?.image.url ?? null,
+    imageUrls: images.slice(0, 4).map((w) => w.image.url),
     linkCount: links.length,
-    linkUrl: link?.url ?? null,
-    linkTitle: link?.preview?.title ?? null,
-    linkImage: link?.preview?.image ?? null,
-    linkSiteName: link?.preview?.siteName ?? null,
+    links: links.slice(0, 4).map((w) => ({
+      url: w.url,
+      title: w.preview?.title ?? null,
+      image: w.preview?.image ?? null,
+      siteName: w.preview?.siteName ?? null,
+    })),
   };
 
   // One lowercase string the search box can match against.
@@ -57,7 +55,7 @@ function buildSummary(event, widgets) {
     ...(event.tags ?? []),
     ...(event.rows ?? []).map((row) => row.name),
     ...notes.flatMap((w) => [w.body, ...(w.checklist ?? []).map((item) => item.text)]),
-    ...dates.map((w) => w.label),
+    ...dates.flatMap((w) => [dateSearchText(w.date), w.label]),
     ...links.flatMap((w) => [w.url, w.preview?.title, w.preview?.siteName]),
     ...images.map((w) => w.image.originalName),
   ]
@@ -81,11 +79,17 @@ async function refreshEventSummary(eventId) {
 
   const { summary, searchText } = buildSummary(event, widgets);
 
+  // A blank "new" event becomes a draft the moment anything is added to it.
+  const hasContent = Boolean(
+    event.title?.trim() || event.description?.trim() || (event.tags ?? []).length || widgets.length,
+  );
+  const status = event.status === "new" && hasContent ? "draft" : event.status;
+
   // This write also bumps `updatedAt`, so editing a widget moves the event to
   // the top of "recently edited" for everyone it is shared with.
   return Event.findByIdAndUpdate(
     eventId,
-    { $set: { summary, searchText } },
+    { $set: { summary, searchText, status } },
     { new: true },
   ).lean();
 }

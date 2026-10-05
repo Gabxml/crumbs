@@ -1,5 +1,7 @@
 const { daysBetween, todayInTimezone } = require("../utils/dates");
 const { inDisplayOrder } = require("./eventSummary");
+const { buildTiles } = require("./eventTiles");
+const { ALLOWED_TRANSITIONS } = require("./eventStatus");
 
 // Turns database objects into the JSON the frontend receives.
 // Two reasons not to send documents as they are:
@@ -39,6 +41,8 @@ function serializeEvent(event, ctx = {}) {
         ? "owner"
         : "collaborator"
       : null,
+    // The statuses this event can be moved to right now (for a dropdown).
+    nextStatuses: ALLOWED_TRANSITIONS[event.status] ?? [],
     // A planned event whose date has passed needs attention.
     isOverdue: event.status === "planned" && dateStatus === "past",
     summary: {
@@ -46,18 +50,13 @@ function serializeEvent(event, ctx = {}) {
       eventDates: s.eventDates ?? [],
       dateStatus,
       daysUntil,
-      noteExcerpt: s.noteExcerpt ?? "",
-      imageCount: s.imageCount ?? 0,
-      coverUrl: s.coverUrl ?? null,
+      imageCount: s.imageCount ?? 0, // shown as "N memories"
       linkCount: s.linkCount ?? 0,
-      link: s.linkUrl
-        ? {
-            url: s.linkUrl,
-            title: s.linkTitle ?? null,
-            image: s.linkImage ?? null,
-            siteName: s.linkSiteName ?? null,
-          }
-        : null,
+      // The four tiles of the Collections card (date, note, image, link).
+      // Date tiles also say how far away they are ("Today", "in 3 days").
+      tiles: buildTiles(s).map((tile) =>
+        tile.type === "date" ? { ...tile, ...dateInfo(tile.date, today) } : tile,
+      ),
     },
     createdAt: event.createdAt,
     updatedAt: event.updatedAt,

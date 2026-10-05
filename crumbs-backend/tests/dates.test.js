@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { isValidDateString, todayInTimezone, daysBetween, addDays } = require("../utils/dates");
+const { isValidDateString, todayInTimezone, daysBetween, addDays, dateSearchText } = require("../utils/dates");
 
 test("isValidDateString accepts real dates only", () => {
   assert.equal(isValidDateString("2026-10-12"), true);
@@ -31,4 +31,9 @@ test("daysBetween and addDays", () => {
   assert.equal(daysBetween("2026-02-27", "2026-03-02"), 3); // crosses a month end
   assert.equal(addDays("2026-12-30", 3), "2027-01-02"); // crosses a year end
   assert.equal(addDays("2026-03-01", -1), "2026-02-28");
+});
+
+test("dateSearchText adds the month name and year", () => {
+  assert.equal(dateSearchText("2026-12-25"), "2026-12-25 december 2026");
+  assert.equal(dateSearchText("2027-01-02"), "2027-01-02 january 2027");
 });

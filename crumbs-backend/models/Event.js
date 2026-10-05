@@ -1,9 +1,16 @@
 const mongoose = require("mongoose");
 
-const EVENT_STATUSES = ["draft", "planned", "done", "archived"];
+// "new" = a blank event the user just opened. It becomes "draft" as soon as
+// anything is added, and blank ones are deleted (see routes/events.js).
+const EVENT_STATUSES = ["new", "draft", "planned", "done", "archived"];
 const MAX_TAGS = 8;
 const MAX_COLLABORATORS = 20;
 const MAX_ROWS = 20;
+
+const linkSummarySchema = new mongoose.Schema(
+  { url: String, title: String, image: String, siteName: String },
+  { _id: false },
+);
 
 // A small snapshot of the event's widgets, stored on the event itself.
 //
@@ -35,17 +42,13 @@ const summarySchema = new mongoose.Schema(
     // them all so a date-range search finds any of them. "YYYY-MM-DD" text.
     eventDate: { type: String, default: null },
     eventDates: { type: [String], default: [] },
-    noteExcerpt: { type: String, default: "" },
-    // Checklist items not yet ticked, across all notes widgets. Used only by
-    // the "done" status rule.
-    openChecklistItems: { type: Number, default: 0, min: 0 },
-    imageCount: { type: Number, default: 0, min: 0 }, // image widgets that hold a picture
-    coverUrl: { type: String, default: null }, // the first picture, for the event card
+    // What the Collections card shows (see services/eventTiles.js).
+    noteExcerpts: { type: [String], default: [] }, // up to 3 notes widgets
+    openChecklistItems: { type: Number, default: 0, min: 0 }, // for the "done" rule
+    imageCount: { type: Number, default: 0, min: 0 }, // the "memories" count
+    imageUrls: { type: [String], default: [] }, // the first 4 pictures
     linkCount: { type: Number, default: 0, min: 0 },
-    linkUrl: { type: String, default: null }, // the first link that is set
-    linkTitle: { type: String, default: null },
-    linkImage: { type: String, default: null },
-    linkSiteName: { type: String, default: null },
+    links: { type: [linkSummarySchema], default: [] }, // the first 4 links
   },
   { _id: false },
 );
@@ -70,12 +73,12 @@ const eventSchema = new mongoose.Schema(
         message: `An event can be shared with at most ${MAX_COLLABORATORS} people`,
       },
     },
+    // Empty while the event is brand new; the API requires one when it is edited.
     title: {
       type: String,
-      required: [true, "Title is required"],
       trim: true,
-      minlength: [1, "Title is required"],
       maxlength: [80, "Title must be at most 80 characters"],
+      default: "",
     },
     description: {
       type: String,

@@ -50,6 +50,13 @@ router.get("/", async (req, res) => {
   const { page, limit } = parseOrThrow(listQuerySchema, req.query);
   const query = { q: "", scope: "all", status: [], tags: [], has: [], sort: "recent", page, limit };
 
+  // Housekeeping: blank events nobody filled in within an hour are removed.
+  await Event.deleteMany({
+    owner: req.user._id,
+    status: "new",
+    createdAt: { $lt: new Date(Date.now() - 60 * 60 * 1000) },
+  });
+
   const { events, total } = await findEvents(req.user._id, query);
 
   res.json({
@@ -88,8 +95,9 @@ router.get("/upcoming", async (req, res) => {
   res.json({ from: today, to: until, events: await eventList(events, req.user._id) });
 });
 
-// POST /api/events — create an event with ONE empty row and no widgets,
-// optionally shared with friends right away.
+// POST /api/events — open a new event: ONE empty row, no widgets. With no title
+// (or anything else) it is "new"; the frontend deletes it again if the user leaves
+// without adding anything, and it turns into a draft once something is added.
 router.post("/", async (req, res) => {
   const input = parseOrThrow(createEventSchema, req.body);
   const collaborators = await assertCanInvite(req.user._id, input.collaborators);
@@ -100,6 +108,7 @@ router.post("/", async (req, res) => {
     description: input.description,
     tags: input.tags,
     collaborators,
+    status: input.title || input.description || input.tags.length ? "draft" : "new",
     rows: [{ name: "" }], // every event starts with one empty row
   });
 

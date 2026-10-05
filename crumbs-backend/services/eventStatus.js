@@ -10,6 +10,7 @@
 //     (A notes widget set to plain notes has no checklist, so it never blocks.)
 
 const ALLOWED_TRANSITIONS = {
+  new: [], // becomes a draft by itself once something is added
   draft: ["planned", "archived"],
   planned: ["draft", "done", "archived"],
   done: ["planned", "archived"], // reopening is allowed

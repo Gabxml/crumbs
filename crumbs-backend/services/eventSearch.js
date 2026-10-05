@@ -7,10 +7,10 @@ function escapeRegex(text) {
 
 // Each "has" filter says which summary fields prove a widget has content.
 const HAS_FILTERS = {
-  notes: { "summary.noteExcerpt": { $nin: [null, ""] } },
+  notes: { "summary.noteExcerpts.0": { $exists: true } },
   image: { "summary.imageCount": { $gt: 0 } },
   date: { "summary.eventDate": { $ne: null } },
-  link: { "summary.linkUrl": { $ne: null } },
+  link: { "summary.linkCount": { $gt: 0 } },
 };
 
 // Which events the search covers:
@@ -96,7 +96,9 @@ function buildSortStages(sort) {
 // Runs the query. Used by both the Collections grid and the Search page.
 // Returns one page of events plus the total number of matches.
 async function findEvents(userId, query) {
-  const filter = buildSearchFilter(query, userId);
+  // Blank "new" events never show up in lists.
+  const built = buildSearchFilter(query, userId);
+  const filter = { $and: [...built.$and, { status: { $ne: "new" } }] };
 
   const [events, total] = await Promise.all([
     Event.aggregate([

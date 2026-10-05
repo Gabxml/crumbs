@@ -75,8 +75,15 @@ async function main() {
     (await call(ben, "GET", "/api/friends")).json?.friends?.[0]?.id === ann.id);
 
   // ---- A new event starts with one empty row ----------------------------------
-  const invalid = await call(ann, "POST", "/api/events", { json: { title: "" } });
-  check("create with an empty title -> 400 + field error", invalid.status === 400 && invalid.json?.fields?.title);
+  const blank = await call(ann, "POST", "/api/events", { json: {} });
+  const blankId = blank.json?.event?.id;
+  check("opening a blank event -> 201, status new, one empty row", blank.status === 201 && blank.json.event.status === "new" && blank.json.event.rows.length === 1, `status ${blank.status}`);
+  check("a blank event is not listed in Collections", !(await call(ann, "GET", "/api/events")).json?.events?.some((e) => e.id === blankId));
+  const promoted = await call(ann, "PATCH", `/api/events/${blankId}`, { json: { title: `Titled ${tag}` } });
+  check("adding a title turns a blank event into a draft", promoted.json?.event?.status === "draft");
+  check("clearing the title of an edited event -> 400", (await call(ann, "PATCH", `/api/events/${blankId}`, { json: { title: "" } })).status === 400);
+  check("a blank event the user leaves is deleted -> 200", (await call(ann, "DELETE", `/api/events/${(await call(ann, "POST", "/api/events", { json: {} })).json.event.id}`)).status === 200);
+  await call(ann, "DELETE", `/api/events/${blankId}`);
 
   const created = await call(ann, "POST", "/api/events", {
     json: { title: `Smoke test ${tag}`, tags: ["Smoke", "smoke", "Test"], collaborators: [ben.id] },
@@ -87,6 +94,7 @@ async function main() {
   const event = created.json.event;
   check("it starts with ONE empty row and no widgets", event.rows.length === 1 && created.json.widgets.length === 0, JSON.stringify(event.rows));
   check("tags are lowercased and de-duplicated", event.tags.join() === "smoke,test");
+  check("a draft can only move to planned or archived (no done)", event.nextStatuses.join() === "planned,archived", event.nextStatuses.join());
   check("Ann is the owner, Ben a collaborator", event.role === "owner" && event.owner.id === ann.id && event.collaborators[0]?.id === ben.id);
   check("the event appears in Ben's Collections", (await call(ben, "GET", "/api/events")).json?.events?.some((e) => e.id === event.id));
   check("Ben can rename the event", (await call(ben, "PATCH", `/api/events/${event.id}`, { json: { title: `Smoke renamed ${tag}` } })).status === 200);
@@ -129,7 +137,7 @@ async function main() {
   check("widgets come back row by row, left to right", listed.json?.widgets?.map((w) => w.type).join() === "notes,notes,date,date,link,image,image", listed.json?.widgets?.map((w) => w.type).join());
   check("every widget says which row it is in", listed.json?.widgets?.slice(0, 5).every((w) => w.rowId === row1) && listed.json.widgets.slice(5).every((w) => w.rowId === row2));
   check("the event date is the EARLIEST date widget", summary?.eventDate === inAWeek && summary.eventDates.length === 2);
-  check("the card previews the notes text", summary?.noteExcerpt === "plain text");
+  check("the card has a note tile with the text", listed.json?.event?.summary?.tiles?.find((t) => t.type === "note")?.text === "plain text");
 
   // ---- Notes: text AND checklist together ------------------------------------------
   const notes = notesA.json.widget;
@@ -146,7 +154,7 @@ async function main() {
   const up1 = await call(ben, "POST", `/api/widgets/${imageId}/image`, { form: form("one.png") });
   const url1 = up1.json?.widget?.image?.url;
   check("Ben puts a picture in an image widget -> 201", up1.status === 201 && Boolean(url1), `status ${up1.status}`);
-  check("the event card gets a cover from it", up1.json?.event?.summary?.coverUrl === url1 && up1.json.event.summary.imageCount === 1);
+  check("the event card gets an image tile and counts 1 memory", up1.json?.event?.summary?.tiles?.some((t) => t.type === "image" && t.url === url1) && up1.json.event.summary.imageCount === 1);
   check("the picture is served", (await fetch(BASE + url1)).status === 200);
 
   const up2 = await call(ann, "POST", `/api/widgets/${imageId}/image`, { form: form("two.png") });
@@ -179,6 +187,10 @@ async function main() {
   check("find it by text in a notes widget", await hit(ann, "q=edited"));
   check("find it by a checklist item", await hit(ann, "q=third"));
   check("find it by a row name", await hit(ann, "q=photos"));
+  check("find it by a tag", await hit(ann, "q=smoke"));
+  const month = new Date(inAWeek + "T00:00:00Z").toLocaleString("en-US", { month: "long", timeZone: "UTC" });
+  check(`find it by the month of its date ("${month.toLowerCase()}")`, await hit(ann, `q=${month}`));
+  check("find it by a short month name", await hit(ann, `q=${month.slice(0, 3)}`));
   check("Ben finds it too (shared with him)", await hit(ben, `q=${tag}`));
   check("scope=mine: Ann yes, Ben no", (await hit(ann, "scope=mine")) && !(await hit(ben, "scope=mine")));
   check("scope=shared: Ben yes, Ann no", (await hit(ben, "scope=shared")) && !(await hit(ann, "scope=shared")));
@@ -225,7 +237,7 @@ async function main() {
 
   // ---- Delete the event ----------------------------------------------------------------------------
   const del = await call(ann, "DELETE", `/api/events/${event.id}`);
-  check("Ann deletes the event -> 200 and it reports what was removed", del.status === 200 && del.json.deleted.widgets === 5, JSON.stringify(del.json));
+  check("Ann deletes the event -> 200 and it reports what was removed", del.status === 200 && del.json.deleted.widgets === 4, JSON.stringify(del.json)); // 2 notes + 2 dates are left: the link and the image row were deleted earlier
   check("deleted event -> 404", (await call(ann, "GET", `/api/events/${event.id}`)).status === 404);
   check("unknown id -> 404, malformed id -> 400",
     (await call(ann, "GET", `/api/events/${NO_SUCH_ID}`)).status === 404 && (await call(ann, "GET", "/api/events/abc")).status === 400);

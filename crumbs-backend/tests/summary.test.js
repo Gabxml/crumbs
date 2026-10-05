@@ -16,9 +16,9 @@ test("an event with no widgets has an empty summary", () => {
   assert.equal(summary.eventDate, null);
   assert.deepEqual(summary.eventDates, []);
   assert.equal(summary.imageCount, 0);
-  assert.equal(summary.coverUrl, null);
-  assert.equal(summary.linkUrl, null);
-  assert.equal(summary.noteExcerpt, "");
+  assert.deepEqual(summary.imageUrls, []);
+  assert.deepEqual(summary.links, []);
+  assert.deepEqual(summary.noteExcerpts, []);
 });
 
 test("the event date is the EARLIEST date widget; all dates are kept for range search", () => {
@@ -32,26 +32,26 @@ test("notes hold text AND a checklist; open items are counted across ALL notes w
     notes("r1", 0, { body: "Bring sunscreen", checklist: [{ _id: "c1", text: "Book hotel", done: true }, { _id: "c2", text: "Pack bags", done: false }] }),
     notes("r2", 0, { checklist: [{ _id: "c3", text: "Buy tickets", done: false }] }),
   ]);
-  assert.equal(summary.noteExcerpt, "Bring sunscreen");
+  assert.deepEqual(summary.noteExcerpts, ["Bring sunscreen", "Buy tickets"]);
   assert.equal(summary.openChecklistItems, 2);
 });
 
 test("with no text anywhere, the preview falls back to the first checklist", () => {
   const { summary } = buildSummary(event, [notes("r1", 0, { checklist: [{ _id: "a", text: "one" }, { _id: "b", text: "two" }] })]);
-  assert.equal(summary.noteExcerpt, "one · two");
+  assert.deepEqual(summary.noteExcerpts, ["one · two"]);
 });
 
 test("the cover is the first picture in display order (rows top to bottom, then left to right)", () => {
   const { summary } = buildSummary(event, [image("r2", 0, "bottom.png"), image("r1", 1, "second.png"), image("r1", 0, "first.png"), image("r1", 2, null)]);
-  assert.equal(summary.coverUrl, "/uploads/first.png");
+  assert.deepEqual(summary.imageUrls, ["/uploads/first.png", "/uploads/second.png", "/uploads/bottom.png"]);
   assert.equal(summary.imageCount, 3); // the empty image widget is not counted
 });
 
 test("links are counted across all rows; empty ones are ignored", () => {
   const { summary } = buildSummary(event, [link("r1", 0, null), link("r2", 0, "https://two.test/", "Two"), link("r1", 1, "https://one.test/", "One")]);
   assert.equal(summary.linkCount, 2);
-  assert.equal(summary.linkUrl, "https://one.test/"); // first in display order
-  assert.equal(summary.linkTitle, "One");
+  assert.equal(summary.links[0].url, "https://one.test/"); // first in display order
+  assert.equal(summary.links[0].title, "One");
 });
 
 test("searchText covers row names, notes, checklist, date labels, links and picture names", () => {
@@ -91,11 +91,11 @@ test("serializeEvent lists rows, people and the viewer's role", () => {
 });
 
 test("serializeEvent hides internals and has no thumbnail or checklist progress", () => {
-  const json = serializeEvent(stored({ searchText: "x", summary: { openChecklistItems: 2, coverUrl: "/uploads/a.png" } }), { today: "2026-10-02" });
+  const json = serializeEvent(stored({ searchText: "x", summary: { openChecklistItems: 2, imageCount: 13, imageUrls: ["/uploads/a.png"] } }), { today: "2026-10-02" });
   assert.equal(json.searchText, undefined);
   assert.equal(json.summary.openChecklistItems, undefined);
-  assert.equal(json.summary.coverUrl, "/uploads/a.png");
-  assert.equal(json.summary.thumbnailUrl, undefined);
+  assert.equal(json.summary.imageCount, 13); // "13 memories"
+  assert.deepEqual(json.summary.tiles, [{ type: "image", url: "/uploads/a.png" }]);
 });
 
 test("serializeWidget: image widgets hold one picture and hide the file name", () => {
@@ -124,4 +124,15 @@ test("sortWidgets: rows top to bottom (as listed in the event), then left to rig
   // reordering the rows reorders the result
   const flipped = sortWidgets(sorted, { rows: [rows[1], rows[0]] });
   assert.deepEqual(flipped.map((w) => w._id), ["d", "c", "a", "b"]);
+});
+
+test("a date can be found by its month name, a short form of it, or its year", () => {
+  const { searchText } = buildSummary(event, [date("r1", 0, "2026-12-25", "Christmas")]);
+  for (const word of ["december", "dec", "2026", "2026-12-25", "christmas"]) assert.ok(searchText.includes(word), word);
+  assert.ok(!searchText.includes("november"));
+});
+
+test("title and tags are searchable text too", () => {
+  const { searchText } = buildSummary({ ...event, title: "Japan trip", tags: ["travel", "december"] }, []);
+  assert.ok(searchText.includes("travel") && searchText.includes("japan") && searchText.includes("december"));
 });
