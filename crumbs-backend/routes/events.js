@@ -18,7 +18,7 @@ const {
   listQuerySchema,
   upcomingQuerySchema,
 } = require("../validators/search");
-const { refreshEventSummary } = require("../services/eventSummary");
+const { refreshEventSummary } = require("../services/eventSummary");v
 const { serializeWidget, sortWidgets } = require("../services/serializers");
 const { eventPayload, eventJson, eventList } = require("../services/eventPayload");
 const { checkTransition } = require("../services/eventStatus");
