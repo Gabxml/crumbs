@@ -1,16 +1,20 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { ApiError } from '../lib/api'
 import { useAuth } from '../hooks/useAuth'
+import ResendVerification from '../components/ResendVerification'
 import { registerSchema } from '../lib/schemas'
 import type { RegisterInput } from '../lib/schemas'
 
 export default function Register() {
   const { register: registerUser } = useAuth()
-  const navigate = useNavigate()
   const [formError, setFormError] = useState<string | null>(null)
+
+  // The account exists but nobody is signed in yet, so this is a holding
+  // screen: "go and open the email" rather than a page that needs the session.
+  const [created, setCreated] = useState<{ email: string; emailSent: boolean } | null>(null)
 
   const {
     register,
@@ -25,8 +29,8 @@ export default function Register() {
   const onSubmit = async (values: RegisterInput) => {
     setFormError(null)
     try {
-      await registerUser(values)
-      navigate('/', { replace: true })
+      const result = await registerUser(values)
+      setCreated({ email: values.email.trim(), emailSent: result.verificationEmailSent })
     } catch (error) {
       if (error instanceof ApiError) {
         for (const [field, messages] of Object.entries(error.fields)) {
@@ -51,6 +55,39 @@ export default function Register() {
     className:
       'w-full rounded-md border border-border bg-bg px-3 py-2 font-sans text-text outline-none focus-visible:border-accent',
   })
+
+  if (created) {
+    return (
+      <section className="space-y-6">
+        <h1 className="text-4xl font-heading text-text-h">Check your email</h1>
+
+        <p className="text-text">
+          {created.emailSent ? (
+            <>
+              We sent a confirmation link to <strong>{created.email}</strong>. Open it to
+              finish setting up your account.
+            </>
+          ) : (
+            <>
+              Your account was created, but the confirmation email could not be sent.
+              Nothing is lost — ask for another link below.
+            </>
+          )}
+        </p>
+        <p className="text-text">
+          The link works once and expires in 24 hours. Until you use it you cannot sign in.
+        </p>
+
+        <ResendVerification email={created.email} />
+
+        <p className="text-text">
+          <Link to="/login" className="text-accent underline">
+            Back to sign in
+          </Link>
+        </p>
+      </section>
+    )
+  }
 
   return (
     <section className="space-y-6">

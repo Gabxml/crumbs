@@ -14,6 +14,11 @@ export const userSchema = z.object({
   username: z.string(),
   email: z.string(),
   createdAt: z.string(),
+  firstName: z.string().nullish(),
+  lastName: z.string().nullish(),
+  avatarUrl: z.string().nullish(),
+  friendsCount: z.number().int().nonnegative().optional(),
+  emailVerified: z.boolean(),
 })
 
 export type User = z.infer<typeof userSchema>
@@ -49,3 +54,55 @@ export const crumbSchema = z.object({
 })
 
 export type CrumbInput = z.infer<typeof crumbSchema>
+
+export const profileSchema = z.object({
+  firstName: z.string().trim().max(50, 'First name must be at most 50 characters'),
+  lastName: z.string().trim().max(50, 'Last name must be at most 50 characters'),
+  username: usernameSchema,
+  email: z.string().trim().toLowerCase().email('Enter a valid email address'),
+})
+
+export type ProfileInput = z.infer<typeof profileSchema>
+
+export const passwordChangeSchema = z
+  .object({
+    currentPassword: z.string().min(1, 'Enter your current password'),
+    newPassword: z.string().min(8, 'Password must be at least 8 characters'),
+    confirmPassword: z.string(),
+  })
+  .refine((v) => v.newPassword === v.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  })
+
+export type PasswordChangeInput = z.infer<typeof passwordChangeSchema>
+
+export const friendSchema = z.object({
+  id: z.string(),
+  username: z.string(),
+  firstName: z.string().nullish(),
+  lastName: z.string().nullish(),
+  avatarUrl: z.string().nullish(),
+})
+
+export type Friend = z.infer<typeof friendSchema>
+
+export const crumbRecordSchema = z.object({
+  id: z.string(),
+  imageUrl: z.string(),
+  caption: z.string(),
+  collectionId: z.string().nullish(),
+  createdAt: z.string(),
+})
+
+export type Crumb = z.infer<typeof crumbRecordSchema>
+
+// An upload can also file the photo into a collection. When the collection
+// copy is refused the crumb is still saved, and this says why.
+export const crumbUploadResponseSchema = z.object({
+  crumb: crumbRecordSchema,
+  filedInCollection: z.boolean(),
+  collectionCopyError: z.string().nullish(),
+})
+
+export type CrumbResult = z.infer<typeof crumbUploadResponseSchema>

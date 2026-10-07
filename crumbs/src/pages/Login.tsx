@@ -3,7 +3,9 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { ApiError } from '../lib/api'
+import { UnverifiedEmailError } from '../lib/auth'
 import { useAuth } from '../hooks/useAuth'
+import ResendVerification from '../components/ResendVerification'
 import { loginSchema } from '../lib/schemas'
 import type { LoginInput } from '../lib/schemas'
 
@@ -12,6 +14,9 @@ export default function Login() {
   const navigate = useNavigate()
   const location = useLocation()
   const [formError, setFormError] = useState<string | null>(null)
+  // Set when the password was right but the address is not confirmed, so the
+  // page can offer another link instead of a dead end.
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null)
 
   const {
     register,
@@ -25,11 +30,16 @@ export default function Login() {
 
   const onSubmit = async (values: LoginInput) => {
     setFormError(null)
+    setUnconfirmedEmail(null)
     try {
       await login(values)
       const from = (location.state as { from?: string } | null)?.from
       navigate(from ?? '/', { replace: true })
     } catch (error) {
+      if (error instanceof UnverifiedEmailError) {
+        setUnconfirmedEmail(values.email.trim())
+        return
+      }
       if (error instanceof ApiError) {
         for (const [field, messages] of Object.entries(error.fields)) {
           if (field === 'email' || field === 'password') {
@@ -49,10 +59,22 @@ export default function Login() {
     <section className="space-y-6">
       <h1 className="text-4xl font-heading text-text-h">Login</h1>
 
-      {formError && (
-        <p role="alert" className="text-accent">
-          {formError}
-        </p>
+      {unconfirmedEmail ? (
+        <div className="space-y-3 rounded-md border border-border p-4 text-left">
+          <p role="alert" className="text-accent">
+            Confirm your email address before signing in.
+          </p>
+          <p className="text-sm text-text">
+            Open the link we sent to {unconfirmedEmail}, or ask for another one.
+          </p>
+          <ResendVerification email={unconfirmedEmail} />
+        </div>
+      ) : (
+        formError && (
+          <p role="alert" className="text-accent">
+            {formError}
+          </p>
+        )
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">

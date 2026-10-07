@@ -8,7 +8,8 @@ const HttpError = require("../utils/httpError");
 const { parseOrThrow } = require("../validators/common");
 const { sendRequestSchema, userSearchSchema } = require("../validators/friends");
 const { getFriendIds, relationshipOf } = require("../services/friends");
-const { escapeRegex } = require("../services/eventSearch");
+const { PERSON_FIELDS, personSummary, loadPeople } = require("../services/people");
+const { escapeRegex } = require("../services/collectionSearch");
 
 const router = express.Router();
 
@@ -16,23 +17,19 @@ router.use(requireAuth);
 router.param("id", validateObjectIdParam);
 router.param("userId", validateObjectIdParam);
 
-// The only things other users ever see about a person: id and username.
-const person = (user) => ({ id: String(user._id), username: user.username });
-
-async function loadPeople(ids) {
-  const users = await User.find({ _id: { $in: ids } }).select("username").lean();
-  return new Map(users.map((user) => [String(user._id), user]));
-}
+// What other users see about a person: id, username, names and photo, so a
+// friend list can be rendered. NEVER the email — see services/people.js.
+// loadPeople() already returns this shape, so its values are not wrapped again.
 
 // GET /api/friends — my friends, alphabetically.
 router.get("/", async (req, res) => {
   const ids = await getFriendIds(req.user._id);
   const users = await User.find({ _id: { $in: ids } })
-    .select("username")
+    .select(PERSON_FIELDS)
     .sort({ usernameLower: 1 })
     .lean();
 
-  res.json({ friends: users.map(person) });
+  res.json({ friends: users.map(personSummary) });
 });
 
 // GET /api/friends/requests — requests waiting for me, and ones I have sent.
@@ -50,7 +47,7 @@ router.get("/requests", async (req, res) => {
   );
   const shape = (row, otherId) => ({
     id: String(row._id),
-    user: person(people.get(String(otherId)) ?? { _id: otherId, username: null }),
+    user: people.get(String(otherId)) ?? { id: String(otherId), username: null },
     createdAt: row.createdAt,
   });
 
@@ -70,7 +67,7 @@ router.get("/search", async (req, res) => {
     usernameLower: { $regex: escapeRegex(q.toLowerCase()) },
     _id: { $ne: me },
   })
-    .select("username")
+    .select(PERSON_FIELDS)
     .sort({ usernameLower: 1 })
     .limit(10)
     .lean();
@@ -85,7 +82,7 @@ router.get("/search", async (req, res) => {
 
   res.json({
     users: users.map((user) => ({
-      ...person(user),
+      ...personSummary(user),
       relationship: relationshipOf(me, user._id, friendships),
     })),
   });
@@ -99,7 +96,7 @@ router.post("/requests", async (req, res) => {
 
   if (userId === String(me)) throw new HttpError(400, "You cannot add yourself as a friend");
 
-  const target = await User.findById(userId).select("username").lean();
+  const target = await User.findById(userId).select(PERSON_FIELDS).lean();
   if (!target) throw new HttpError(404, "User not found");
 
   const existing = await Friendship.findOne({ pairKey: pairKeyFor(me, userId) });
@@ -110,12 +107,12 @@ router.post("/requests", async (req, res) => {
     }
     existing.status = "accepted";
     await existing.save();
-    return res.json({ message: "You are now friends", friend: person(target) });
+    return res.json({ message: "You are now friends", friend: personSummary(target) });
   }
 
   const request = await Friendship.create({ requester: me, recipient: userId });
   res.status(201).json({
-    request: { id: String(request._id), user: person(target), status: request.status },
+    request: { id: String(request._id), user: personSummary(target), status: request.status },
   });
 });
 
@@ -131,8 +128,8 @@ router.patch("/requests/:id/accept", async (req, res) => {
   request.status = "accepted";
   await request.save();
 
-  const requester = await User.findById(request.requester).select("username").lean();
-  res.json({ message: "You are now friends", friend: person(requester) });
+  const requester = await User.findById(request.requester).select(PERSON_FIELDS).lean();
+  res.json({ message: "You are now friends", friend: personSummary(requester) });
 });
 
 // DELETE /api/friends/requests/:id — decline a request sent to me, or cancel one I sent.
@@ -151,7 +148,7 @@ router.delete("/requests/:id", async (req, res) => {
 });
 
 // DELETE /api/friends/:userId — stop being friends.
-// Events already shared stay shared; the creator can remove people from an event.
+// Collections already shared stay shared; the creator can remove people from a collection.
 router.delete("/:userId", async (req, res) => {
   const removed = await Friendship.findOneAndDelete({
     pairKey: pairKeyFor(req.user._id, req.params.userId),

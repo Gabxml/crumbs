@@ -1,0 +1,72 @@
+[33mcommit 309282c8878b7ac4e28e97720365bd4b1f239242[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32munified-platform[m[33m, [m[1;31morigin/unified-platform[m[33m, [m[1;32mmaster[m[33m)[m
+Author: halamikel <37craven@gmail.com>
+Date:   Wed Oct 7 19:52:20 2026 +0800
+
+    Build the collections UI, public profiles and account recovery
+    
+    Collections and search
+    - Collections grid with the server's own tiles, status dropdown offering only
+      legal moves, create and delete
+    - Collection detail: rows and all four widget types (notes with a working
+      checklist, dates, pictures, links with previews), plus sharing
+    - One search box for both collections and people, results grouped by type.
+      The people request only fires for 2-20 characters, the window the server
+      accepts, so a long phrase cannot come back a 400.
+    - Row and widget reordering. Both endpoints insist on the COMPLETE id list, so
+      a move rebuilds the array rather than sending just the pair that swapped.
+    
+    Profiles
+    - /u/:username for everyone, /profile redirects so old links still work
+    - Friend actions on the profile: add, accept, decline, cancel, remove
+    - Find people by username, wired to the friend-request endpoints
+    
+    Accounts
+    - Register now waits for a confirmation email instead of signing you in
+    - Forgot password, reset password, and confirm-email pages; the login screen
+      offers a resend when an account is not yet confirmed
+    
+    Fixes found while building
+    - src/lib/api.ts set a default Content-Type of application/json. Axios
+      rewrites FormData into JSON when it sees that, so every upload sent
+      {"image":{}} and the server found no file. Removing the one line fixes
+      collection pictures, crumbs AND profile photos.
+    - Asset URLs were rendered raw, so the browser asked Vite for /uploads/... and
+      got index.html back: a 200 with text/html, and an image that silently never
+      appeared. One assetUrl() helper now covers card tiles, widget pictures and
+      link previews.
+    - Sign-out and the friends dialog were only reachable through a page that
+      became dead when /profile started redirecting.
+    
+    lint and build clean.
+
+[33mcommit 0ade5c03a7acbf5e49191207a423639114eab7a7[m
+Author: halamikel <37craven@gmail.com>
+Date:   Tue Oct 6 22:22:20 2026 +0800
+
+    Match the frontend to the unified backend
+    
+    The API moved while these branches were apart, so the client was calling
+    endpoints that no longer exist and sending uploads the server can no longer
+    read.
+    
+    - POST /api/crumbs and PUT /api/auth/avatar now send multipart/form-data with
+      the picture in a field named "image"; caption and collection go in the body.
+      They were raw blobs with query parameters, which the server ignores now.
+    - Friends come from /api/friends, not /api/auth/friends.
+    - The "?collection=" param nothing implemented is now collectionId in the
+      body, and it works: the upload files the photo into that collection too.
+    - src/lib/collections.ts fills the picker from GET /api/collections. Profile
+      and Crumbs both use it, replacing the hardcoded empty array.
+    - An upload whose collection copy is refused reports it instead of silently
+      pretending it worked; the crumb itself is still saved.
+    - Dropped crumbsCount/collectionsCount from userSchema. Nothing returned them.
+      The counts now come from the lists the page already loads.
+    - Added deleteCrumb() for the new DELETE route.
+
+[33mcommit a4e0e94e16482a5dc1d91915e7835dbd455ef90d[m
+Author: halamikel <jhnnmchl06@gmail.com>
+Date:   Sun Oct 4 10:15:28 2026 +0800
+
+    - Added Option When Uploading Crumbs Where The User Can Include The Crumb To A Collection
+    - Added Summary/Total Numbers Of Crumbs, Collections, And Friends In The Profile Page
+    - Shows the Crumbs and Collections In The Profile Page

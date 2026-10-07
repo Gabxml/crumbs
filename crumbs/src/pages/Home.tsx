@@ -9,7 +9,7 @@ const navLinks = [
   { to: '/forgot-password', label: 'Forgot password' },
   { to: '/collections', label: 'Collections' },
   { to: '/search', label: 'Search' },
-  { to: '/addevent', label: 'Add event' },
+  { to: '/collections/new', label: 'New collection' },
   { to: '/crumbs', label: 'Crumbs' },
   { to: '/profile', label: 'Profile' },
   { to: '/edit-profile', label: 'Edit profile' },

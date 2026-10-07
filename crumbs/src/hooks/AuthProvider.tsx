@@ -6,6 +6,7 @@ import {
   logout as logoutRequest,
   register as registerRequest,
 } from '../lib/auth'
+import type { RegisterResult } from '../lib/auth'
 import type { LoginInput, RegisterInput, User } from '../lib/schemas'
 import { AuthContext } from './useAuth'
 import type { AuthContextValue } from './useAuth'
@@ -39,11 +40,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return me
   }, [])
 
-  const register = useCallback(async (input: RegisterInput) => {
-    const me = await registerRequest(input)
-    setUser(me)
-    return me
-  }, [])
+  // No setUser here on purpose: registration does not sign you in, the user has
+  // to confirm their address first.
+  const register = useCallback(
+    async (input: RegisterInput): Promise<RegisterResult> => registerRequest(input),
+    [],
+  )
 
   const logout = useCallback(async () => {
     await logoutRequest()
@@ -51,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, loading, login, register, logout }),
+    () => ({ user, loading, login, register, logout, updateUser: setUser }),
     [user, loading, login, register, logout],
   )
 
