@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
+import { Trash01 } from '@untitledui/icons/Trash01'
 import { crumbLabel, crumbSrc, deleteCrumb } from '../lib/crumbs'
 import { ApiError } from '../lib/api'
 import type { Crumb } from '../lib/schemas'
+import Button from './Button'
+import Squircle from './Squircle'
+import { RADIUS } from '../lib/ui'
 
 export default function CrumbViewer({
   crumb,
@@ -49,6 +53,9 @@ export default function CrumbViewer({
   }
 
   return (
+    // A lightbox rather than a sheet: the photo is the content, so it gets the
+    // whole viewport and the backdrop only dims around it. The two controls sit
+    // on the backdrop as white circles so they read over any image.
     <dialog
       ref={ref}
       aria-label="Crumb"
@@ -56,42 +63,49 @@ export default function CrumbViewer({
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose()
       }}
-      className="m-auto max-h-[94dvh] max-w-[94vw] overflow-visible border-0 bg-transparent p-0 text-white open:flex backdrop:bg-black/40 backdrop:backdrop-blur-lg"
+      className="m-auto max-h-[94dvh] max-w-[94vw] overflow-visible border-0 bg-transparent p-0 text-text open:flex backdrop:bg-black/45 backdrop:backdrop-blur-lg"
     >
       {crumb && (
         <figure className="m-0 flex flex-col items-center gap-3 text-center">
-          <img
-            src={crumbSrc(crumb.imageUrl)}
-            alt={crumbLabel(crumb)}
-            className="aspect-square w-[min(90vw,70dvh)] rounded-md object-cover shadow-2xl"
-          />
-          <figcaption className="w-[min(90vw,70dvh)] text-lg break-words">
+          <Squircle
+            radius={RADIUS.card}
+            className="overflow-hidden bg-fill shadow-float"
+          >
+            <img
+              src={crumbSrc(crumb.imageUrl)}
+              alt={crumbLabel(crumb)}
+              className="aspect-square w-[min(90vw,70dvh)] object-cover"
+            />
+          </Squircle>
+
+          <figcaption className="max-w-[min(90vw,40rem)] text-[15px] break-words text-text-h">
             {crumbLabel(crumb)}
           </figcaption>
 
           {error?.crumbId === crumb.id && (
-            <p role="alert" className="text-sm text-red-300">
+            <p role="alert" className="text-[15px] text-danger">
               {error.message}
             </p>
           )}
 
           <div className="flex flex-wrap justify-center gap-3">
-            <button
-              type="button"
+            <Button
+              variant="secondary"
               onClick={() => void remove()}
               disabled={busy}
-              className="rounded-md border border-red-300/60 px-4 py-2 font-heading text-red-200 disabled:opacity-50"
+              className="bg-white/85 text-danger backdrop-blur-xl"
             >
+              <Trash01 size={16} strokeWidth={1.75} />
               {busy ? 'Deleting…' : 'Delete'}
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="secondary"
               onClick={onClose}
               disabled={busy}
-              className="rounded-md border border-white/50 px-4 py-2 font-heading text-white disabled:opacity-50"
+              className="bg-white/85 text-text-h backdrop-blur-xl"
             >
               Close
-            </button>
+            </Button>
           </div>
         </figure>
       )}

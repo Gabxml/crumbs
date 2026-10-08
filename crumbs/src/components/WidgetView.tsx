@@ -6,23 +6,23 @@ import {
   updateWidget,
   uploadWidgetImage,
 } from '../lib/collections'
+import { Image01 } from '@untitledui/icons/Image01'
+import { Trash01 } from '@untitledui/icons/Trash01'
 import type { Widget } from '../lib/collectionSchemas'
+import Button from './Button'
+import Card from './Card'
+import Squircle from './Squircle'
+import { RADIUS } from '../lib/ui'
 
 const inputClass =
-  'w-full rounded-md border border-border bg-bg px-3 py-2 font-sans text-text outline-none focus-visible:border-accent'
-const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
+  'w-full rounded-control bg-fill px-4 py-2.5 text-[15px] text-text-h placeholder:text-inactive outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
 
 function DeleteWidget({ onDeleted }: { onDeleted: () => void }) {
   return (
-    <button
-      type="button"
-      onClick={onDeleted}
-      aria-label="Remove this"
-      className={`rounded-md border border-border px-2 py-1 text-xs text-text hover:bg-accent-bg ${focusRing}`}
-    >
+    <Button variant="danger" size="sm" onClick={onDeleted}>
+      <Trash01 size={14} strokeWidth={1.75} />
       Remove
-    </button>
+    </Button>
   )
 }
 
@@ -89,7 +89,7 @@ function NotesWidget({
         <ul className="space-y-1">
           {widget.checklist.map((item) => (
             <li key={item.id}>
-              <label className="flex items-start gap-2 text-sm">
+              <label className="flex items-start gap-2.5 py-0.5 text-[15px]">
                 <input
                   type="checkbox"
                   checked={item.done}
@@ -100,9 +100,9 @@ function NotesWidget({
                         setError(err instanceof Error ? err.message : 'Could not tick it.'),
                       )
                   }
-                  className="mt-1 size-4 accent-[var(--accent)]"
+                  className="mt-1 size-[18px] shrink-0 accent-[var(--accent)]"
                 />
-                <span className={item.done ? 'line-through text-text' : 'text-text-h'}>
+                <span className={item.done ? 'text-[15px] text-text line-through' : 'text-[15px] text-text-h'}>
                   {item.text}
                 </span>
               </label>
@@ -111,7 +111,7 @@ function NotesWidget({
         </ul>
       )}
 
-      <div className="flex gap-2">
+      <div>
         <label className="sr-only" htmlFor={`checklist-${widget.id}`}>
           Add a checklist item
         </label>
@@ -130,15 +130,17 @@ function NotesWidget({
         />
       </div>
 
-      <p className="text-xs text-text">
+      <p className="text-[13px] text-text">
         {saving ? 'Saving…' : 'Changes save when you click away.'}
       </p>
       {error && (
-        <p role="alert" className="text-xs text-accent">
+        <p role="alert" className="text-[13px] text-danger">
           {error}
         </p>
       )}
-      <DeleteWidget onDeleted={onDeleted} />
+      <div>
+        <DeleteWidget onDeleted={onDeleted} />
+      </div>
     </div>
   )
 }
@@ -191,11 +193,13 @@ function DateWidget({
         className={inputClass}
       />
       {error && (
-        <p role="alert" className="text-xs text-accent">
+        <p role="alert" className="text-[13px] text-danger">
           {error}
         </p>
       )}
-      <DeleteWidget onDeleted={onDeleted} />
+      <div>
+        <DeleteWidget onDeleted={onDeleted} />
+      </div>
     </div>
   )
 }
@@ -229,27 +233,30 @@ function ImageWidget({
     <div className="space-y-2">
       {widget.image ? (
         <>
-          <img
-            src={assetUrl(widget.image.url)}
-            alt={widget.image.originalName || 'Picture'}
-            className="aspect-[4/3] w-full rounded-md object-cover"
-          />
+          <Squircle radius={RADIUS.media} className="overflow-hidden bg-fill">
+            <img
+              src={assetUrl(widget.image.url)}
+              alt={widget.image.originalName || 'Picture'}
+              loading="lazy"
+              className="aspect-[4/3] w-full object-cover"
+            />
+          </Squircle>
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => inputRef.current?.click()}
               disabled={busy}
-              className="rounded-md border border-border px-2 py-1 text-xs text-text disabled:opacity-50"
             >
               {busy ? 'Uploading…' : 'Replace'}
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => void clearWidgetImage(widget.id).then(onChange)}
-              className="rounded-md border border-border px-2 py-1 text-xs text-text"
             >
               Remove picture
-            </button>
+            </Button>
           </div>
         </>
       ) : (
@@ -257,8 +264,9 @@ function ImageWidget({
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={busy}
-          className={`grid aspect-[4/3] w-full place-items-center rounded-md border border-dashed border-border text-sm text-text disabled:opacity-50 ${focusRing}`}
+          className="grid aspect-[4/3] w-full place-items-center gap-2 rounded-media bg-fill text-[14px] font-medium text-text transition duration-200 ease-ios hover:brightness-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
         >
+          <Image01 size={22} strokeWidth={1.75} className="text-inactive" />
           {busy ? 'Uploading…' : 'Add a picture'}
         </button>
       )}
@@ -276,11 +284,13 @@ function ImageWidget({
       />
 
       {error && (
-        <p role="alert" className="text-xs text-accent">
+        <p role="alert" className="text-[13px] text-danger">
           {error}
         </p>
       )}
-      <DeleteWidget onDeleted={onDeleted} />
+      <div>
+        <DeleteWidget onDeleted={onDeleted} />
+      </div>
     </div>
   )
 }
@@ -326,34 +336,40 @@ function LinkWidget({
           href={widget.url ?? undefined}
           target="_blank"
           rel="noreferrer"
-          className="block rounded-md border border-border p-2 text-sm no-underline hover:bg-accent-bg"
+          className="block overflow-hidden rounded-media bg-fill p-3 no-underline transition duration-200 ease-ios hover:brightness-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
           {widget.preview.image && (
-            <img
-              src={assetUrl(widget.preview.image)}
-              alt=""
-              loading="lazy"
-              className="mb-2 aspect-[2/1] w-full rounded object-cover"
-            />
+            <Squircle radius={RADIUS.media} className="mb-2 overflow-hidden">
+              <img
+                src={assetUrl(widget.preview.image)}
+                alt=""
+                loading="lazy"
+                className="aspect-[2/1] w-full object-cover"
+              />
+            </Squircle>
           )}
-          {widget.preview.title || widget.url}
+          <span className="block text-[15px] font-medium text-text-h">
+            {widget.preview.title || widget.url}
+          </span>
           {widget.preview.siteName && (
-            <span className="block text-xs text-text">{widget.preview.siteName}</span>
+            <span className="block text-[13px] text-text">{widget.preview.siteName}</span>
           )}
         </a>
       )}
       {widget.preview?.status === 'unavailable' && (
-        <p className="text-xs text-text">
+        <p className="text-[13px] text-text">
           The link was saved but its preview could not be fetched.
         </p>
       )}
 
       {error && (
-        <p role="alert" className="text-xs text-accent">
+        <p role="alert" className="text-[13px] text-danger">
           {error}
         </p>
       )}
-      <DeleteWidget onDeleted={onDeleted} />
+      <div>
+        <DeleteWidget onDeleted={onDeleted} />
+      </div>
     </div>
   )
 }
@@ -367,33 +383,31 @@ export default function WidgetView({
   onChange: (next: Widget) => void
   onDeleted: () => void
 }) {
-  const shared = 'rounded-md border border-border p-3'
-
   if (widget.type === 'notes') {
     return (
-      <div className={shared}>
+      <Card className="flex h-full flex-col gap-2.5">
         <NotesWidget widget={widget} onChange={onChange} onDeleted={onDeleted} />
-      </div>
+      </Card>
     )
   }
   if (widget.type === 'date') {
     return (
-      <div className={shared}>
+      <Card className="flex h-full flex-col gap-2.5">
         <DateWidget widget={widget} onChange={onChange} onDeleted={onDeleted} />
-      </div>
+      </Card>
     )
   }
   if (widget.type === 'image') {
     return (
-      <div className={shared}>
+      <Card className="flex h-full flex-col gap-2.5">
         <ImageWidget widget={widget} onChange={onChange} onDeleted={onDeleted} />
-      </div>
+      </Card>
     )
   }
   return (
-    <div className={shared}>
+    <Card className="flex h-full flex-col gap-2.5">
       <LinkWidget widget={widget} onChange={onChange} onDeleted={onDeleted} />
-    </div>
+    </Card>
   )
 }
 

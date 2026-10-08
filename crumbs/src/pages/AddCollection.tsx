@@ -1,11 +1,10 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../lib/api'
 import { createCollection } from '../lib/collections'
-
-const inputClass =
-  'w-full rounded-md border border-border bg-bg px-3 py-2 font-sans text-text outline-none focus-visible:border-accent'
-const labelClass = 'block font-heading text-text-h'
+import Button, { ButtonLink } from '../components/Button'
+import Card from '../components/Card'
+import Field from '../components/Field'
 
 const TITLE_MAX = 80
 const DESCRIPTION_MAX = 500
@@ -57,61 +56,36 @@ export default function AddCollection() {
   }
 
   return (
-    <section className="space-y-6">
-      <h1 className="my-0!">New collection</h1>
+    <section className="mx-auto max-w-xl space-y-6">
+      <h1 className="text-[28px] font-semibold tracking-heading text-text-h">
+        New collection
+      </h1>
 
-      <form onSubmit={submit} className="space-y-5 text-left" noValidate>
-        <div className="space-y-1">
-          <label htmlFor="title" className={labelClass}>
-            Title
-          </label>
-          <input
-            id="title"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            maxLength={TITLE_MAX}
-            placeholder="Weekend hike"
-            aria-invalid={Boolean(fieldErrors.title)}
-            aria-describedby={fieldErrors.title ? 'title-error' : 'title-hint'}
-            className={inputClass}
-          />
-          {fieldErrors.title ? (
-            <p id="title-error" role="alert" className="text-sm text-accent">
-              {fieldErrors.title[0]}
-            </p>
-          ) : (
-            <p id="title-hint" className="text-xs text-text">
-              Optional. You can leave it empty and name it later.
-            </p>
-          )}
-        </div>
+      <Card>
+      <form onSubmit={submit} className="space-y-5" noValidate>
+        <Field
+          label="Title"
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          maxLength={TITLE_MAX}
+          placeholder="Weekend hike"
+          error={fieldErrors.title?.[0]}
+          hint="Optional. You can leave it empty and name it later."
+        />
 
-        <div className="space-y-1">
-          <label htmlFor="description" className={labelClass}>
-            Description
-          </label>
-          <textarea
-            id="description"
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            maxLength={DESCRIPTION_MAX}
-            rows={4}
-            aria-invalid={Boolean(fieldErrors.description)}
-            aria-describedby={fieldErrors.description ? 'description-error' : undefined}
-            className={`${inputClass} resize-y`}
-          />
-          <p className="text-xs text-text">
-            {description.length}/{DESCRIPTION_MAX}
-          </p>
-          {fieldErrors.description && (
-            <p id="description-error" role="alert" className="text-sm text-accent">
-              {fieldErrors.description[0]}
-            </p>
-          )}
-        </div>
+        <Field
+          label="Description"
+          as="textarea"
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          maxLength={DESCRIPTION_MAX}
+          rows={4}
+          error={fieldErrors.description?.[0]}
+          hint={`${description.length}/${DESCRIPTION_MAX}`}
+        />
 
-        <div className="space-y-1">
-          <label htmlFor="tag" className={labelClass}>
+        <div className="space-y-1.5">
+          <label htmlFor="tag" className="text-[13px] font-medium text-text-h">
             Tags
           </label>
           <div className="flex gap-2">
@@ -126,26 +100,27 @@ export default function AddCollection() {
               }}
               maxLength={TAG_MAX}
               placeholder="outdoors, then press Enter"
-              className={inputClass}
+              className="w-full rounded-control bg-fill px-4 py-2.5 text-[15px] text-text-h placeholder:text-inactive outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             />
-            <button
-              type="button"
+            <Button
+              variant="secondary"
               onClick={addTag}
               disabled={!tagText.trim() || tags.length >= TAGS_MAX}
-              className="shrink-0 rounded-md border border-border px-3 py-2 font-heading text-text-h disabled:opacity-50"
             >
               Add
-            </button>
+            </Button>
           </div>
 
           {tags.length > 0 && (
-            <ul className="mt-2 flex flex-wrap gap-1">
+            <ul className="mt-2 flex flex-wrap gap-1.5">
               {tags.map((tag) => (
                 <li key={tag}>
+                  {/* A tag is removable, so it is a control and carries the focus
+                      ring; ChipLabel is for tags that are only read. */}
                   <button
                     type="button"
                     onClick={() => setTags((current) => current.filter((item) => item !== tag))}
-                    className="rounded-full bg-accent-bg px-2 py-0.5 text-xs text-text-h"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-accent-tint px-3 py-1 text-[13px] font-medium text-on-accent transition duration-200 ease-ios focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.97]"
                   >
                     {tag} ×
                   </button>
@@ -153,43 +128,37 @@ export default function AddCollection() {
               ))}
             </ul>
           )}
-          <p className="text-xs text-text">
+          <p className="text-[13px] text-text">
             {tags.length}/{TAGS_MAX}. Tags are lowercase and help Search.
           </p>
           {fieldErrors.tags && (
-            <p role="alert" className="text-sm text-accent">
+            <p role="alert" className="text-[13px] text-danger">
               {fieldErrors.tags[0]}
             </p>
           )}
         </div>
 
         {formError && (
-          <p role="alert" className="text-accent">
+          <p role="alert" className="text-[15px] text-danger">
             {formError}
           </p>
         )}
 
         <div className="flex flex-wrap gap-3">
-          <button
-            type="submit"
-            disabled={busy}
-            className="rounded-md bg-accent px-4 py-2 font-heading text-bg disabled:opacity-50"
-          >
+          <Button type="submit" disabled={busy}>
             {busy ? 'Creating…' : 'Create collection'}
-          </button>
-          <Link
-            to="/collections"
-            className="rounded-md border border-border px-4 py-2 font-heading text-text-h"
-          >
+          </Button>
+          <ButtonLink to="/collections" variant="secondary">
             Cancel
-          </Link>
+          </ButtonLink>
         </div>
 
-        <p className="text-xs text-text">
+        <p className="text-[13px] text-text">
           A new collection starts with one empty row. You can add notes, dates, pictures and
           links to it next.
         </p>
       </form>
+      </Card>
     </section>
   )
 }

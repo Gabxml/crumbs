@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import type { ChangeEvent, ReactNode } from 'react'
+import type { ChangeEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
@@ -15,48 +15,20 @@ import {
 } from '../lib/profile'
 import { passwordChangeSchema, profileSchema } from '../lib/schemas'
 import type { PasswordChangeInput, ProfileInput, User } from '../lib/schemas'
-
-const inputClass =
-  'w-full rounded-md border border-border bg-bg px-3 py-2 font-sans text-text outline-none focus-visible:border-accent'
-const buttonClass =
-  'rounded-md bg-accent px-4 py-2 font-heading text-bg disabled:opacity-50'
-
-function Field({
-  id,
-  label,
-  error,
-  children,
-}: {
-  id: string
-  label: string
-  error?: string
-  children: ReactNode
-}) {
-  return (
-    <div className="space-y-1 text-left">
-      <label htmlFor={id} className="block font-heading text-text-h">
-        {label}
-      </label>
-      {children}
-      {error && (
-        <p id={`${id}-error`} role="alert" className="text-sm text-accent">
-          {error}
-        </p>
-      )}
-    </div>
-  )
-}
+import Button from '../components/Button'
+import Card from '../components/Card'
+import Field from '../components/Field'
 
 function Feedback({ error, success }: { error: string | null; success: string | null }) {
   return (
     <div aria-live="polite" className="text-left">
       {error && (
-        <p role="alert" className="text-accent">
+        <p role="alert" className="text-[15px] text-danger">
           {error}
         </p>
       )}
       {success && (
-        <p role="status" className="text-text-h">
+        <p role="status" className="text-[15px] font-medium text-success">
           {success}
         </p>
       )}
@@ -123,66 +95,50 @@ function DetailsForm({ user }: { user: User }) {
       aria-labelledby="details-heading"
       className="space-y-4"
     >
-      <h2 id="details-heading" className="text-left">
+      <h2 id="details-heading" className="text-[17px] font-semibold tracking-heading text-text-h">
         Your details
       </h2>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field id="firstName" label="First name" error={errors.firstName?.message}>
-          <input
-            id="firstName"
-            type="text"
-            autoComplete="given-name"
-            {...register('firstName')}
-            aria-invalid={Boolean(errors.firstName)}
-            aria-describedby={errors.firstName ? 'firstName-error' : undefined}
-            className={inputClass}
-          />
-        </Field>
+        <Field
+          label="First name"
+          type="text"
+          autoComplete="given-name"
+          {...register('firstName')}
+          error={errors.firstName?.message}
+        />
 
-        <Field id="lastName" label="Last name" error={errors.lastName?.message}>
-          <input
-            id="lastName"
-            type="text"
-            autoComplete="family-name"
-            {...register('lastName')}
-            aria-invalid={Boolean(errors.lastName)}
-            aria-describedby={errors.lastName ? 'lastName-error' : undefined}
-            className={inputClass}
-          />
-        </Field>
+        <Field
+          label="Last name"
+          type="text"
+          autoComplete="family-name"
+          {...register('lastName')}
+          error={errors.lastName?.message}
+        />
       </div>
 
-      <Field id="username" label="Username" error={errors.username?.message}>
-        <input
-          id="username"
-          type="text"
-          autoComplete="username"
-          {...register('username')}
-          aria-invalid={Boolean(errors.username)}
-          aria-describedby={errors.username ? 'username-error' : undefined}
-          className={inputClass}
-        />
-      </Field>
+      <Field
+        label="Username"
+        type="text"
+        autoComplete="username"
+        {...register('username')}
+        error={errors.username?.message}
+      />
 
-      <Field id="email" label="Email" error={errors.email?.message}>
-        <input
-          id="email"
-          type="email"
-          autoComplete="email"
-          {...register('email')}
-          aria-invalid={Boolean(errors.email)}
-          aria-describedby={errors.email ? 'email-error' : undefined}
-          className={inputClass}
-        />
-      </Field>
+      <Field
+        label="Email"
+        type="email"
+        autoComplete="email"
+        {...register('email')}
+        error={errors.email?.message}
+      />
 
       <Feedback error={formError} success={saved} />
 
-      <div className="text-left">
-        <button type="submit" disabled={isSubmitting || !isDirty} className={buttonClass}>
+      <div>
+        <Button type="submit" disabled={isSubmitting || !isDirty}>
           {isSubmitting ? 'Saving…' : 'Save changes'}
-        </button>
+        </Button>
       </div>
     </form>
   )
@@ -233,52 +189,40 @@ function PasswordForm() {
       aria-labelledby="password-heading"
       className="space-y-4"
     >
-      <h2 id="password-heading" className="text-left">
+      <h2 id="password-heading" className="text-[17px] font-semibold tracking-heading text-text-h">
         Change password
       </h2>
 
-      <Field id="currentPassword" label="Current password" error={errors.currentPassword?.message}>
-        <input
-          id="currentPassword"
-          type="password"
-          autoComplete="current-password"
-          {...register('currentPassword')}
-          aria-invalid={Boolean(errors.currentPassword)}
-          aria-describedby={errors.currentPassword ? 'currentPassword-error' : undefined}
-          className={inputClass}
-        />
-      </Field>
+      <Field
+        label="Current password"
+        type="password"
+        autoComplete="current-password"
+        {...register('currentPassword')}
+        error={errors.currentPassword?.message}
+      />
 
-      <Field id="newPassword" label="New password" error={errors.newPassword?.message}>
-        <input
-          id="newPassword"
-          type="password"
-          autoComplete="new-password"
-          {...register('newPassword')}
-          aria-invalid={Boolean(errors.newPassword)}
-          aria-describedby={errors.newPassword ? 'newPassword-error' : undefined}
-          className={inputClass}
-        />
-      </Field>
+      <Field
+        label="New password"
+        type="password"
+        autoComplete="new-password"
+        {...register('newPassword')}
+        error={errors.newPassword?.message}
+      />
 
-      <Field id="confirmPassword" label="Confirm new password" error={errors.confirmPassword?.message}>
-        <input
-          id="confirmPassword"
-          type="password"
-          autoComplete="new-password"
-          {...register('confirmPassword')}
-          aria-invalid={Boolean(errors.confirmPassword)}
-          aria-describedby={errors.confirmPassword ? 'confirmPassword-error' : undefined}
-          className={inputClass}
-        />
-      </Field>
+      <Field
+        label="Confirm new password"
+        type="password"
+        autoComplete="new-password"
+        {...register('confirmPassword')}
+        error={errors.confirmPassword?.message}
+      />
 
       <Feedback error={formError} success={saved} />
 
-      <div className="text-left">
-        <button type="submit" disabled={isSubmitting} className={buttonClass}>
+      <div>
+        <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? 'Changing…' : 'Change password'}
-        </button>
+        </Button>
       </div>
     </form>
   )
@@ -315,34 +259,30 @@ function PhotoSection({ user }: { user: User }) {
 
   return (
     <section aria-labelledby="photo-heading" className="space-y-4">
-      <h2 id="photo-heading" className="text-left">
+      <h2 id="photo-heading" className="text-[17px] font-semibold tracking-heading text-text-h">
         Profile photo
       </h2>
 
-      <div className="flex items-center gap-4 text-left">
-        <Avatar user={user} className="size-24 shrink-0 text-4xl" />
+      <div className="flex items-center gap-4">
+        <div className="size-24 shrink-0 text-4xl">
+          <Avatar user={user} />
+        </div>
         <div className="space-y-2">
           <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={() => inputRef.current?.click()}
-              disabled={busy}
-              className={buttonClass}
-            >
+            <Button onClick={() => inputRef.current?.click()} disabled={busy}>
               {busy ? 'Saving…' : user.avatarUrl ? 'Change photo' : 'Upload photo'}
-            </button>
+            </Button>
             {user.avatarUrl && (
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 onClick={() => void run(removeAvatar, 'Photo removed.')}
                 disabled={busy}
-                className="rounded-md border border-border px-4 py-2 font-heading text-text-h disabled:opacity-50"
               >
                 Remove photo
-              </button>
+              </Button>
             )}
           </div>
-          <p className="text-sm text-text">
+          <p className="text-[14px] text-text">
             JPEG, PNG or WebP. Cropped to a square and saved right away.
           </p>
         </div>
@@ -369,17 +309,28 @@ export default function EditProfile() {
   }
 
   return (
-    <section className="space-y-10">
-      <div className="space-y-2 text-left">
-        <Link to="/profile" className="text-accent underline underline-offset-4">
+    <section className="mx-auto max-w-xl space-y-6">
+      <div className="space-y-2">
+        <Link
+          to="/profile"
+          className="inline-block rounded text-[14px] text-accent underline underline-offset-4"
+        >
           Back to profile
         </Link>
-        <h1 className="text-4xl font-heading text-text-h">Edit profile</h1>
+        <h1 className="text-[28px] font-semibold tracking-heading text-text-h">
+          Edit profile
+        </h1>
       </div>
 
-      <PhotoSection user={user} />
-      <DetailsForm user={user} />
-      <PasswordForm />
+      <Card>
+        <PhotoSection user={user} />
+      </Card>
+      <Card>
+        <DetailsForm user={user} />
+      </Card>
+      <Card>
+        <PasswordForm />
+      </Card>
     </section>
   )
 }

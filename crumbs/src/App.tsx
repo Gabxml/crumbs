@@ -9,6 +9,7 @@ import EditProfile from './pages/EditProfile'
 import ForgotPassword from './pages/ForgotPassword'
 import Home from './pages/Home'
 import Login from './pages/Login'
+import Navbar from './components/Navbar'
 import NotFound from './pages/NotFound'
 import OwnProfile from './pages/OwnProfile'
 import PublicProfile from './pages/PublicProfile'
@@ -19,17 +20,29 @@ import VerifyEmail from './pages/VerifyEmail'
 
 export default function App() {
   const { pathname } = useLocation()
+  // The crumb canvas is a full-bleed surface with its own gesture handling, so
+  // it opts out of the centred column and the page gutters.
   const fullWidth = pathname === '/crumbs'
 
   return (
-    <main
+    <div
       className={
         fullWidth
-          ? 'min-h-svh w-full py-12'
-          : 'mx-auto min-h-svh w-full max-w-3xl px-6 py-12'
+          ? 'flex min-h-svh w-full flex-col'
+          : 'mx-auto flex min-h-svh w-full max-w-[1100px] flex-col px-6'
       }
     >
-      <Routes>
+      <Navbar />
+
+      {/* pt keeps the first heading clear of the floating nav pill; pb clears the
+          mobile tab bar, which floats over the viewport rather than taking part
+          in the flow. */}
+      <main
+        className={
+          fullWidth ? 'w-full flex-1 pt-4 pb-8' : 'flex-1 pt-6 pb-28 lg:pb-16'
+        }
+      >
+        <Routes>
         <Route path="/" element={<Home />} />
         <Route
           path="/login"
@@ -121,7 +134,8 @@ export default function App() {
           }
         />
         <Route path="*" element={<NotFound />} />
-      </Routes>
-    </main>
+        </Routes>
+      </main>
+    </div>
   )
 }

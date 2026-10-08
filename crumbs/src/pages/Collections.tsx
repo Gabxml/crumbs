@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import CollectionCard from '../components/CollectionCard'
+import Button, { ButtonLink } from '../components/Button'
+import Chip from '../components/Chip'
+import Field from '../components/Field'
 import { ApiError } from '../lib/api'
 import {
   createCollection,
@@ -13,9 +16,10 @@ import {
 import { STATUS_LABELS } from '../lib/collectionSchemas'
 import type { Collection, CollectionStatus } from '../lib/collectionSchemas'
 
-const inputClass =
-  'w-full rounded-md border border-border bg-bg px-3 py-2 font-sans text-text outline-none focus-visible:border-accent'
-const buttonClass = 'rounded-md bg-accent px-4 py-2 font-heading text-bg disabled:opacity-50'
+// A native select, restyled to the system's control shape: subtle fill, no
+// border, squircle corners.
+const selectClass =
+  'rounded-control bg-fill px-3 py-2 text-[13px] text-text-h outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
 
 type Filter = 'all' | 'mine' | 'shared' | 'upcoming'
 const FILTERS: { value: Filter; label: string }[] = [
@@ -61,7 +65,7 @@ function StatusSelect({
         value={collection.status}
         disabled={busy}
         onChange={(event) => void move(event.target.value as CollectionStatus)}
-        className="rounded-md border border-border bg-bg px-2 py-1 font-sans text-sm text-text outline-none focus-visible:border-accent"
+        className={selectClass}
       >
         <option value={collection.status}>{STATUS_LABELS[collection.status]}</option>
         {collection.nextStatuses.map((status) => (
@@ -71,7 +75,7 @@ function StatusSelect({
         ))}
       </select>
       {error && (
-        <span role="alert" className="mt-1 block max-w-56 text-xs text-accent">
+        <span role="alert" className="mt-1 block max-w-56 text-[13px] text-danger">
           {error}
         </span>
       )}
@@ -106,16 +110,11 @@ function DeleteButton({
 
   return (
     <span className="text-right">
-      <button
-        type="button"
-        onClick={() => void remove()}
-        disabled={busy}
-        className="rounded-md border border-border px-2 py-1 font-sans text-sm text-text disabled:opacity-50"
-      >
+      <Button variant="danger" size="sm" onClick={() => void remove()} disabled={busy}>
         {busy ? 'Deleting…' : 'Delete'}
-      </button>
+      </Button>
       {error && (
-        <span role="alert" className="mt-1 block max-w-56 text-xs text-accent">
+        <span role="alert" className="mt-1 block max-w-56 text-[13px] text-danger">
           {error}
         </span>
       )}
@@ -198,67 +197,54 @@ export default function Collections() {
 
   return (
     <section className="space-y-6">
-      <header className="flex flex-wrap items-baseline justify-between gap-4">
-        <h1 className="my-0!">Collections</h1>
-        <Link to="/collections/new" className="text-accent underline">
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-[28px] font-semibold tracking-heading text-text-h">Collections</h1>
+        <ButtonLink to="/collections/new" variant="secondary">
           New collection
-        </Link>
+        </ButtonLink>
       </header>
 
-      <form onSubmit={create} className="flex flex-wrap items-start gap-3">
-        <div className="min-w-64 flex-1 space-y-1 text-left">
-          <label htmlFor="new-collection" className="block font-heading text-text-h">
-            Start a new collection
-          </label>
-          <input
-            id="new-collection"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            placeholder="Weekend hike"
-            maxLength={80}
-            className={inputClass}
-          />
-        </div>
-        <button type="submit" disabled={creating || !title.trim()} className={buttonClass}>
+      {/* items-end lines the button's baseline with the input rather than the
+          label, so the pair sits together without a magic offset. */}
+      <form onSubmit={create} className="flex flex-wrap items-end gap-3">
+        <Field
+          label="Start a new collection"
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          placeholder="Weekend hike"
+          maxLength={80}
+          className="min-w-56 flex-1"
+        />
+        <Button type="submit" disabled={creating || !title.trim()}>
           {creating ? 'Creating…' : 'Create'}
-        </button>
+        </Button>
       </form>
       {createError && (
-        <p role="alert" className="text-accent">
+        <p role="alert" className="text-[15px] text-danger">
           {createError}
         </p>
       )}
 
       <nav aria-label="Filter collections" className="flex flex-wrap gap-2">
         {FILTERS.map(({ value, label }) => (
-          <button
-            key={value}
-            type="button"
-            aria-pressed={filter === value}
-            onClick={() => setFilter(value)}
-            className={
-              filter === value
-                ? 'rounded-full bg-accent px-3 py-1 font-heading text-bg'
-                : 'rounded-full border border-border px-3 py-1 font-heading text-text-h'
-            }
-          >
+          <Chip key={value} selected={filter === value} onClick={() => setFilter(value)}>
             {label}
-          </button>
+          </Chip>
         ))}
       </nav>
 
       {loadError && (
-        <p role="alert" className="text-accent">
+        <p role="alert" className="text-[15px] text-danger">
           {loadError}
         </p>
       )}
 
       {loading || collections === null ? (
-        <p role="status" className="text-text">
+        <p role="status" className="text-[15px] text-text">
           Loading collections…
         </p>
       ) : collections.length === 0 ? (
-        <p className="text-text">
+        <p className="text-[15px] text-text">
           {filter === 'upcoming'
             ? 'Nothing coming up in the next 30 days.'
             : filter === 'shared'
@@ -267,20 +253,21 @@ export default function Collections() {
                 ? 'You have not created any collections.'
                 : 'No collections yet.'}{' '}
           {filter !== 'upcoming' && filter !== 'shared' && (
-            <Link to="/collections/new" className="text-accent underline">
+            <Link
+              to="/collections/new"
+              className="rounded text-accent underline underline-offset-4"
+            >
               Start one
             </Link>
           )}
         </p>
       ) : (
-        <ul className="grid gap-4 sm:grid-cols-2">
+        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {collections.map((collection) => (
             <li key={collection.id}>
               <CollectionCard
                 collection={collection}
-                action={
-                  <StatusSelect collection={collection} onChanged={replace} />
-                }
+                action={<StatusSelect collection={collection} onChanged={replace} />}
                 footerAction={
                   collection.role === 'owner' ? (
                     <DeleteButton collection={collection} onDeleted={drop} />

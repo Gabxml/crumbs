@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent, PointerEvent } from 'react'
 import { crumbLabel, crumbSrc } from '../lib/crumbs'
 import type { Crumb } from '../lib/schemas'
+import Button from './Button'
 
 type Drag = {
   id: number
@@ -114,7 +115,11 @@ export default function CrumbCanvas({
           <li
             key={crumb.id}
             data-crumb-id={crumb.id}
-            className="absolute overflow-hidden"
+            // rounded-media rather than the clip-path Squircle: a canvas can hold
+            // hundreds of tiles, and 20px is at the edge of where a superellipse
+            // reads as different from an arc. index.css upgrades this to a true
+            // squircle where the browser can draw one.
+            className="absolute overflow-hidden rounded-media"
             style={{ left, top, width: tile, height: tile }}
           >
             <button
@@ -193,17 +198,28 @@ export default function CrumbCanvas({
     return () => observer.disconnect()
   }, [crumbs.length])
 
+  // The tiles hang off the left edge of the viewport, so on a narrow screen the
+  // gap the margin is meant to guarantee is eaten by the page gutter.
+  useEffect(() => {
+    const viewport = viewportRef.current
+    if (!viewport) return
+    const parent = viewport.parentElement
+    if (!parent) return
+
+    const negative = window.innerWidth - viewport.clientWidth
+    if (negative > 0) parent.style.marginInline = `${negative / 2}px`
+    return () => {
+      parent.style.marginInline = ''
+    }
+  }, [])
+
   // The canvas is as wide as the browser window, which includes the scrollbar's width.
   // Clipping the page sideways stops that sliver from creating a horizontal scrollbar.
-  // The page frame's side borders would show through the canvas, so hide them here only.
   useEffect(() => {
     const page = document.documentElement
-    const frame = document.getElementById('root')
     page.classList.add('overflow-x-clip')
-    if (frame) frame.style.borderInlineColor = 'transparent'
     return () => {
       page.classList.remove('overflow-x-clip')
-      if (frame) frame.style.borderInlineColor = ''
     }
   }, [])
 
@@ -332,15 +348,15 @@ export default function CrumbCanvas({
           </ul>
 
           {crumbs.length === 0 && emptyMessage && (
-            <p className="pointer-events-none absolute inset-0 grid place-items-center px-6 text-center text-text">
+            <p className="pointer-events-none absolute inset-0 grid place-items-center px-6 text-center text-[15px] text-text">
               {emptyMessage}
             </p>
           )}
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-4 px-6">
-        <p id="crumb-canvas-hint" className="text-left text-sm text-text">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p id="crumb-canvas-hint" className="text-left text-[14px] text-text">
           Drag to move around.
           <span className="hidden [@media(hover:hover)]:inline">
             {' '}
@@ -348,13 +364,9 @@ export default function CrumbCanvas({
           </span>
         </p>
         {crumbs.length > 0 && (
-          <button
-            type="button"
-            onClick={recenter}
-            className="shrink-0 rounded-md border border-border px-3 py-1.5 font-heading text-sm text-text-h"
-          >
+          <Button variant="secondary" size="sm" onClick={recenter} className="shrink-0">
             Recenter
-          </button>
+          </Button>
         )}
       </div>
     </div>

@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { ArrowUp } from '@untitledui/icons/ArrowUp'
+import { ArrowDown } from '@untitledui/icons/ArrowDown'
+import { ArrowLeft } from '@untitledui/icons/ArrowLeft'
+import { ArrowRight } from '@untitledui/icons/ArrowRight'
+import { Plus } from '@untitledui/icons/Plus'
+import { Trash01 } from '@untitledui/icons/Trash01'
 import WidgetView from '../components/WidgetView'
 import { ApiError } from '../lib/api'
 import { fetchFriends } from '../lib/friends'
@@ -28,12 +34,14 @@ import type {
   Widget,
   WidgetType,
 } from '../lib/collectionSchemas'
+import Button from '../components/Button'
+import Card from '../components/Card'
+import Chip, { ChipLabel } from '../components/Chip'
+import Field from '../components/Field'
+import { focusRing, pressable } from '../lib/ui'
 
-const inputClass =
-  'w-full rounded-md border border-border bg-bg px-3 py-2 font-sans text-text outline-none focus-visible:border-accent'
-const labelClass = 'block font-heading text-text-h'
-const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
+const selectClass =
+  'rounded-control bg-fill px-3 py-2 text-[15px] text-text-h outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
 
 const WIDGET_LABELS: Record<WidgetType, string> = {
   notes: 'Notes',
@@ -54,7 +62,13 @@ function Nudge({
   onClick: () => void
   label: string
 }) {
-  const glyph = { up: '\u2191', down: '\u2193', left: '\u2190', right: '\u2192' }[direction]
+  const glyph = {
+    up: <ArrowUp size={14} strokeWidth={1.75} />,
+    down: <ArrowDown size={14} strokeWidth={1.75} />,
+    left: <ArrowLeft size={14} strokeWidth={1.75} />,
+    right: <ArrowRight size={14} strokeWidth={1.75} />,
+  }[direction]
+
   return (
     <button
       type="button"
@@ -62,9 +76,9 @@ function Nudge({
       disabled={disabled}
       aria-label={label}
       title={label}
-      className={`grid size-6 place-items-center rounded border border-border text-sm leading-none text-text hover:bg-accent-bg disabled:opacity-30 ${focusRing}`}
+      className={`grid size-7 place-items-center rounded-full bg-fill text-text disabled:opacity-30 ${focusRing} ${pressable}`}
     >
-      <span aria-hidden="true">{glyph}</span>
+      {glyph}
     </button>
   )
 }
@@ -163,11 +177,11 @@ function RowSection({
   }
 
   return (
-    <section className="space-y-3 rounded-lg border border-border p-4">
+    <Card as="section" className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <label htmlFor={`row-${row.id}`} className={labelClass}>
+        <span className="text-[13px] font-medium text-text-h">
           Row {index + 1} of {rowCount}
-        </label>
+        </span>
         <span className="flex items-center gap-1">
           <Nudge
             direction="up"
@@ -181,30 +195,32 @@ function RowSection({
             onClick={() => void moveRow(index + 1)}
             label={`Move row ${index + 1} down`}
           />
-          <button
-            type="button"
+          <Button
+            variant="danger"
+            size="sm"
             onClick={() => onRowDeleted(row.id)}
-            className="ml-1 rounded-md border border-border px-2 py-1 text-xs text-text hover:bg-accent-bg"
+            className="ml-1"
           >
             Delete row
-          </button>
+          </Button>
         </span>
       </div>
 
       <input
         id={`row-${row.id}`}
+        aria-label={`Name for row ${index + 1}`}
         value={name}
         onChange={(event) => setName(event.target.value)}
         onBlur={() => void rename()}
         maxLength={40}
         placeholder="Name this row (optional)"
-        className={inputClass}
+        className={`w-full rounded-control bg-fill px-4 py-2.5 text-[15px] text-text-h placeholder:text-inactive outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent`}
       />
 
       {widgets.length === 0 ? (
-        <p className="text-sm text-text">Nothing in this row yet.</p>
+        <p className="text-[15px] text-text">Nothing in this row yet.</p>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2">
+        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {widgets.map((widget, position) => (
             <li key={widget.id}>
               {widgets.length > 1 && (
@@ -235,24 +251,19 @@ function RowSection({
 
       <div className="flex flex-wrap gap-2">
         {WIDGET_TYPES.map((type) => (
-          <button
-            key={type}
-            type="button"
-            onClick={() => void add(type)}
-            disabled={adding !== null}
-            className={`rounded-md border border-border px-3 py-1 font-sans text-sm text-text disabled:opacity-50 ${focusRing}`}
-          >
-            {adding === type ? 'Adding…' : `+ ${WIDGET_LABELS[type]}`}
-          </button>
+          <Chip key={type} disabled={adding !== null} onClick={() => void add(type)}>
+            <Plus size={14} strokeWidth={1.75} />
+            {adding === type ? 'Adding…' : WIDGET_LABELS[type]}
+          </Chip>
         ))}
       </div>
 
       {error && (
-        <p role="alert" className="text-sm text-accent">
+        <p role="alert" className="text-[15px] text-danger">
           {error}
         </p>
       )}
-    </section>
+    </Card>
   )
 }
 
@@ -303,9 +314,9 @@ function ShareForm({
   return (
     <div className="space-y-2">
       {friends === null ? (
-        <p className="text-sm text-text">Loading your friends…</p>
+        <p className="text-[15px] text-text">Loading your friends…</p>
       ) : candidates.length === 0 ? (
-        <p className="text-sm text-text">
+        <p className="text-[15px] text-text">
           {friends.length === 0
             ? 'You have no friends yet.'
             : 'Everyone on your friends list is already on this collection.'}
@@ -314,20 +325,16 @@ function ShareForm({
         <ul className="flex flex-wrap gap-2">
           {candidates.map((friend) => (
             <li key={friend.id}>
-              <button
-                type="button"
-                onClick={() => void add(friend.id)}
-                disabled={busy}
-                className={`rounded-md border border-border px-2 py-1 text-xs text-text disabled:opacity-50 ${focusRing}`}
-              >
-                + {friend.firstName || friend.lastName ? fullName(friend) : friend.username}
-              </button>
+              <Chip disabled={busy} onClick={() => void add(friend.id)}>
+                <Plus size={14} strokeWidth={1.75} />
+                {friend.firstName || friend.lastName ? fullName(friend) : friend.username}
+              </Chip>
             </li>
           ))}
         </ul>
       )}
       {error && (
-        <p role="alert" className="text-sm text-accent">
+        <p role="alert" className="text-[15px] text-danger">
           {error}
         </p>
       )}
@@ -377,12 +384,15 @@ export default function CollectionDetail() {
 
   if (loadError) {
     return (
-      <section className="space-y-4">
-        <h1 className="my-0!">Collection</h1>
-        <p role="alert" className="text-accent">
+      <section className="mx-auto max-w-md space-y-4">
+        <h1 className="text-[28px] font-semibold tracking-heading text-text-h">Collection</h1>
+        <p role="alert" className="text-[15px] text-danger">
           {loadError}
         </p>
-        <Link to="/collections" className="text-accent underline">
+        <Link
+          to="/collections"
+          className="rounded text-accent underline underline-offset-4"
+        >
           Back to collections
         </Link>
       </section>
@@ -392,7 +402,7 @@ export default function CollectionDetail() {
   if (!collection) {
     return (
       <section>
-        <p role="status" className="text-text">
+        <p role="status" className="text-[15px] text-text">
           Loading…
         </p>
       </section>
@@ -450,51 +460,50 @@ export default function CollectionDetail() {
   return (
     <section className="space-y-6">
       <header className="space-y-2">
-        <Link to="/collections" className="text-sm text-accent underline">
+        <Link
+          to="/collections"
+          className="inline-block rounded text-[14px] text-accent underline underline-offset-4"
+        >
           Collections
         </Link>
-        <h1 className="my-0!">{collection.title || 'Untitled collection'}</h1>
+        <h1 className="text-[28px] font-semibold tracking-heading text-text-h">
+          {collection.title || 'Untitled collection'}
+        </h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <ChipLabel tone="accent">{STATUS_LABELS[collection.status]}</ChipLabel>
+          {collection.isOverdue && <ChipLabel tone="danger">Overdue</ChipLabel>}
+        </div>
       </header>
 
-      <div className="space-y-4 rounded-lg border border-border p-4 text-left">
-        <div className="space-y-1">
-          <label htmlFor="detail-title" className={labelClass}>
-            Title
-          </label>
-          <input
-            id="detail-title"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            maxLength={80}
-            className={inputClass}
-          />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="detail-description" className={labelClass}>
-            Description
-          </label>
-          <textarea
-            id="detail-description"
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            onBlur={() => void saveDetails()}
-            maxLength={500}
-            rows={3}
-            className={`${inputClass} resize-y`}
-          />
-        </div>
+      <Card className="space-y-4">
+        <Field
+          label="Title"
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          maxLength={80}
+        />
+
+        <Field
+          label="Description"
+          as="textarea"
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          onBlur={() => void saveDetails()}
+          maxLength={500}
+          rows={3}
+        />
 
         <div className="flex flex-wrap items-center gap-3">
           {collection.nextStatuses.length > 0 ? (
             <>
-              <label htmlFor="detail-status" className={labelClass}>
+              <label htmlFor="detail-status" className="text-[13px] font-medium text-text-h">
                 Status
               </label>
               <select
                 id="detail-status"
                 value={collection.status}
                 onChange={(event) => void move(event.target.value as CollectionStatus)}
-                className={inputClass}
+                className={selectClass}
               >
                 <option value={collection.status}>
                   {STATUS_LABELS[collection.status]}
@@ -507,28 +516,31 @@ export default function CollectionDetail() {
               </select>
             </>
           ) : (
-            <p className="text-sm text-text">Add something and it becomes a draft.</p>
+            <p className="text-[15px] text-text">Add something and it becomes a draft.</p>
           )}
 
           {saved && (
-            <span role="status" className="text-sm text-text">
+            <span role="status" className="text-[14px] text-text">
               Saved.
             </span>
           )}
         </div>
 
         {saveError && (
-          <p role="alert" className="text-sm text-accent">
+          <p role="alert" className="text-[15px] text-danger">
             {saveError}
           </p>
         )}
-      </div>
+      </Card>
 
-      <section className="space-y-3 text-left">
-        <h2 className="text-xl">People</h2>
-        <p className="text-sm text-text">
+      <section className="space-y-3">
+        <h2 className="text-[17px] font-semibold tracking-heading text-text-h">People</h2>
+        <p className="text-[15px] text-text">
           Created by{' '}
-          <Link to={profilePath(collection.owner.username)} className="text-accent underline">
+          <Link
+            to={profilePath(collection.owner.username)}
+            className="rounded text-accent underline underline-offset-4"
+          >
             {collection.owner.username ?? 'someone'}
           </Link>
           .{' '}
@@ -536,7 +548,10 @@ export default function CollectionDetail() {
           {collection.collaborators.map((person, index) => (
             <span key={person.id}>
               {index > 0 && ', '}
-              <Link to={profilePath(person.username)} className="text-accent underline">
+              <Link
+                to={profilePath(person.username)}
+                className="rounded text-accent underline underline-offset-4"
+              >
                 {person.username}
               </Link>
             </span>
@@ -548,15 +563,15 @@ export default function CollectionDetail() {
           <ul className="flex flex-wrap gap-2">
             {collection.collaborators.map((person) => (
               <li key={person.id}>
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={() =>
                     void unshareCollection(collection.id, person.id).then(setCollection)
                   }
-                  className="rounded-md border border-border px-2 py-1 text-xs text-text hover:bg-accent-bg"
                 >
-                  Remove {person.username} ×
-                </button>
+                  Remove {person.username}
+                </Button>
               </li>
             ))}
           </ul>
@@ -567,8 +582,10 @@ export default function CollectionDetail() {
         )}
       </section>
 
-      <div className="space-y-4 text-left">
-        <h2 className="text-xl">Contents</h2>
+      <div className="space-y-4">
+        <h2 className="text-[17px] font-semibold tracking-heading text-text-h">
+          Contents
+        </h2>
         {collection.rows.map((row, rowIndex) => (
           <RowSection
             key={row.id}
@@ -604,26 +621,23 @@ export default function CollectionDetail() {
           />
         ))}
 
-        <button
-          type="button"
+        <Button
+          variant="secondary"
           onClick={() =>
             void addRow(collection.id).then((result) => setCollection(result.collection))
           }
-          className={`rounded-md border border-border px-3 py-2 font-heading text-text-h ${focusRing}`}
         >
-          + Add a row
-        </button>
+          <Plus size={16} strokeWidth={1.75} />
+          Add a row
+        </Button>
       </div>
 
       {collection.role === 'owner' && (
-        <div className="border-t border-border pt-4">
-          <button
-            type="button"
-            onClick={() => void remove()}
-            className="rounded-md border border-border px-3 py-2 font-heading text-text-h"
-          >
+        <div className="pt-2">
+          <Button variant="danger" onClick={() => void remove()}>
+            <Trash01 size={16} strokeWidth={1.75} />
             Delete this collection
-          </button>
+          </Button>
         </div>
       )}
     </section>

@@ -5,9 +5,9 @@ import { ApiError } from '../lib/api'
 import { profilePath, sendFriendRequest } from '../lib/people'
 import type { SearchHit } from '../lib/people'
 import { fullName } from '../lib/user'
-
-const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
+import Button from './Button'
+import { ChipLabel } from './Chip'
+import { focusRing } from '../lib/ui'
 
 const RELATIONSHIP_TEXT: Record<SearchHit['relationship'], string> = {
   friends: 'Friends',
@@ -48,36 +48,33 @@ export default function PersonRow({ hit }: { hit: SearchHit }) {
   const canRequest = hit.relationship === 'none' && !sent
 
   return (
-    <li className="flex flex-wrap items-center gap-3 p-3">
-      <Avatar user={withUsername(hit)} className="size-9" />
+    <li className="flex flex-wrap items-center gap-3 px-4 py-3">
+      <div className="size-10 shrink-0">
+        <Avatar user={withUsername(hit)} />
+      </div>
 
       <span className="min-w-0 flex-1">
         <Link
           to={profilePath(hit.username)}
-          className={`block truncate no-underline hover:underline ${focusRing}`}
+          className={`block truncate text-text-h no-underline ${focusRing}`}
         >
           {hit.username ? `@${hit.username}` : 'Someone'}
         </Link>
-        {name && <span className="block truncate text-sm text-text">{name}</span>}
+        {name && <span className="block truncate text-[14px] text-text">{name}</span>}
       </span>
 
-      <span className="text-xs text-text">
+      <ChipLabel tone={sent ? 'accent' : 'fill'}>
         {sent ? 'Request sent' : RELATIONSHIP_TEXT[hit.relationship]}
-      </span>
+      </ChipLabel>
 
       {canRequest && (
-        <button
-          type="button"
-          onClick={() => void request()}
-          disabled={busy}
-          className={`rounded-md border border-border px-2 py-1 font-sans text-sm text-text disabled:opacity-50 ${focusRing}`}
-        >
+        <Button variant="secondary" size="sm" onClick={() => void request()} disabled={busy}>
           {busy ? 'Sending…' : 'Add friend'}
-        </button>
+        </Button>
       )}
 
       {error && (
-        <span role="alert" className="w-full text-xs text-accent">
+        <span role="alert" className="w-full text-[13px] text-danger">
           {error}
         </span>
       )}

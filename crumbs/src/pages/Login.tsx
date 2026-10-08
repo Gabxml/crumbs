@@ -6,6 +6,9 @@ import { ApiError } from '../lib/api'
 import { UnverifiedEmailError } from '../lib/auth'
 import { useAuth } from '../hooks/useAuth'
 import ResendVerification from '../components/ResendVerification'
+import Button from '../components/Button'
+import Card from '../components/Card'
+import Field from '../components/Field'
 import { loginSchema } from '../lib/schemas'
 import type { LoginInput } from '../lib/schemas'
 
@@ -56,83 +59,61 @@ export default function Login() {
   }
 
   return (
-    <section className="space-y-6">
-      <h1 className="text-4xl font-heading text-text-h">Login</h1>
+    <section className="mx-auto max-w-md space-y-6">
+      <h1 className="text-[28px] font-semibold tracking-heading text-text-h">Log in</h1>
 
-      {unconfirmedEmail ? (
-        <div className="space-y-3 rounded-md border border-border p-4 text-left">
-          <p role="alert" className="text-accent">
-            Confirm your email address before signing in.
-          </p>
-          <p className="text-sm text-text">
-            Open the link we sent to {unconfirmedEmail}, or ask for another one.
-          </p>
-          <ResendVerification email={unconfirmedEmail} />
-        </div>
-      ) : (
-        formError && (
-          <p role="alert" className="text-accent">
+      <Card className="space-y-5">
+        {unconfirmedEmail ? (
+          <div className="space-y-3">
+            <p role="alert" className="text-[15px] font-medium text-danger">
+              Confirm your email address before signing in.
+            </p>
+            <p className="text-[15px] text-text">
+              Open the link we sent to {unconfirmedEmail}, or ask for another one.
+            </p>
+            <ResendVerification email={unconfirmedEmail} />
+          </div>
+        ) : formError ? (
+          <p role="alert" className="text-[15px] text-danger">
             {formError}
           </p>
-        )
-      )}
+        ) : null}
 
-      <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-        <div className="space-y-1">
-          <label htmlFor="email" className="block font-heading text-text-h">
-            Email
-          </label>
-          <input
-            id="email"
+        <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+          <Field
+            label="Email"
             type="email"
             autoComplete="email"
             {...register('email')}
-            aria-invalid={Boolean(errors.email)}
-            aria-describedby={errors.email ? 'email-error' : undefined}
-            className="w-full rounded-md border border-border bg-bg px-3 py-2 font-sans text-text outline-none focus-visible:border-accent"
+            error={errors.email?.message}
           />
-          {errors.email && (
-            <p id="email-error" role="alert" className="text-sm text-accent">
-              {errors.email.message}
-            </p>
-          )}
-        </div>
 
-        <div className="space-y-1">
-          <label htmlFor="password" className="block font-heading text-text-h">
-            Password
-          </label>
-          <input
-            id="password"
+          <Field
+            label="Password"
             type="password"
             autoComplete="current-password"
             {...register('password')}
-            aria-invalid={Boolean(errors.password)}
-            aria-describedby={errors.password ? 'password-error' : undefined}
-            className="w-full rounded-md border border-border bg-bg px-3 py-2 font-sans text-text outline-none focus-visible:border-accent"
+            error={errors.password?.message}
           />
-          {errors.password && (
-            <p id="password-error" role="alert" className="text-sm text-accent">
-              {errors.password.message}
-            </p>
-          )}
-        </div>
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="rounded-md bg-accent px-4 py-2 font-heading text-bg disabled:opacity-50"
+          <Button type="submit" disabled={isSubmitting} className="w-full">
+            {isSubmitting ? 'Signing in…' : 'Sign in'}
+          </Button>
+        </form>
+      </Card>
+
+      <p className="text-[15px] text-text">
+        <Link
+          to="/register"
+          className="rounded text-accent underline underline-offset-4"
         >
-          {isSubmitting ? 'Signing in…' : 'Sign in'}
-        </button>
-      </form>
-
-      <p className="text-text">
-        <Link to="/register" className="text-accent underline">
           Create an account
         </Link>
         {' · '}
-        <Link to="/forgot-password" className="text-accent underline">
+        <Link
+          to="/forgot-password"
+          className="rounded text-accent underline underline-offset-4"
+        >
           Forgot password
         </Link>
       </p>

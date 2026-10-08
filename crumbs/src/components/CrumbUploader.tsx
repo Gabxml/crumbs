@@ -4,6 +4,9 @@ import { uploadCrumb } from '../lib/crumbs'
 import { resizeToFit } from '../lib/image'
 import type { Crumb } from '../lib/schemas'
 import type { CollectionOption } from '../lib/collections'
+import { Plus } from '@untitledui/icons/Plus'
+import Button from './Button'
+import Modal from './Modal'
 
 export type { CollectionOption }
 
@@ -12,7 +15,7 @@ const CAPTION_MAX = 60
 const NO_COLLECTIONS: CollectionOption[] = []
 
 const inputClass =
-  'w-full rounded-md border border-border bg-bg px-3 py-2 font-sans text-text outline-none focus-visible:border-accent'
+  'w-full rounded-control bg-fill px-4 py-2.5 text-[15px] text-text-h placeholder:text-inactive outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
 
 type Item = {
   id: string
@@ -35,7 +38,6 @@ export default function CrumbUploader({
   collections?: CollectionOption[]
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
-  const dialogRef = useRef<HTMLDialogElement>(null)
   const itemsRef = useRef<Item[]>([])
   const [items, setItems] = useState<Item[]>([])
   const [busy, setBusy] = useState(false)
@@ -49,13 +51,6 @@ export default function CrumbUploader({
   }, [items])
 
   useEffect(() => releaseAll, [releaseAll])
-
-  useEffect(() => {
-    const dialog = dialogRef.current
-    if (!dialog) return
-    if (items.length > 0 && !dialog.open) dialog.showModal()
-    if (items.length === 0 && dialog.open) dialog.close()
-  }, [items.length])
 
   const choose = (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []).filter((file) =>
@@ -134,19 +129,12 @@ export default function CrumbUploader({
         type="button"
         aria-label="Add crumbs"
         onClick={() => inputRef.current?.click()}
-        className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-6 z-20 grid size-14 place-items-center rounded-full bg-accent text-bg shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        // A circle, not a squircle: this is the one element that floats over the
+        // canvas, and the diffuse shadow is what separates it from the photos.
+        // It sits above the mobile tab bar, hence the raised bottom offset.
+        className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-5 z-20 grid size-14 place-items-center rounded-full bg-accent text-on-accent shadow-float transition duration-200 ease-ios active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent lg:bottom-8"
       >
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 24 24"
-          className="size-6"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-        >
-          <path d="M12 5v14M5 12h14" />
-        </svg>
+        <Plus size={26} strokeWidth={2} />
       </button>
 
       <input
@@ -158,111 +146,93 @@ export default function CrumbUploader({
         className="hidden"
       />
 
-      <dialog
-        ref={dialogRef}
-        aria-labelledby="upload-heading"
-        onClose={close}
-        onCancel={(event) => {
-          if (busy) event.preventDefault()
-        }}
-        className="m-auto max-h-[85dvh] w-[min(34rem,calc(100%-2rem))] flex-col overflow-hidden rounded-lg border border-border bg-bg p-0 text-left text-text open:flex backdrop:bg-black/60"
-      >
-        <div className="border-b border-border px-5 py-3">
-          <h2 id="upload-heading" className="my-0!">
-            Add crumbs
-          </h2>
-        </div>
-
-        <ul className="divide-y divide-border overflow-y-auto">
-          {items.map((item) => (
-            <li key={item.id} className="flex gap-3 px-5 py-3">
-              <img
-                src={item.preview}
-                alt=""
-                className="size-20 shrink-0 rounded-md object-cover"
-              />
-              <div className="min-w-0 flex-1 space-y-1">
-                <input
-                  type="text"
-                  value={item.caption}
-                  maxLength={CAPTION_MAX}
-                  disabled={busy}
-                  placeholder="Add a caption (optional)"
-                  aria-label={`Caption for ${item.file.name}`}
-                  onChange={(event) => update(item.id, { caption: event.target.value })}
-                  className={inputClass}
+      {/* The sheet is driven by whether there is anything to upload, so it opens
+          as soon as photos are picked and closes when the queue empties. */}
+      <Modal open={items.length > 0} onClose={close} title="Add crumbs">
+        <div className="flex min-h-0 flex-col">
+          <ul className="-mx-1 min-h-0 flex-1 space-y-1 overflow-y-auto px-1">
+            {items.map((item) => (
+              <li key={item.id} className="flex gap-3 py-1.5">
+                <img
+                  src={item.preview}
+                  alt=""
+                  className="size-20 shrink-0 rounded-media object-cover"
                 />
-                <p aria-hidden="true" className="text-right text-xs text-text">
-                  {item.caption.length}/{CAPTION_MAX}
-                </p>
-                {item.status === 'uploading' && (
-                  <p role="status" className="text-sm text-text">
-                    Uploading…
+                <div className="min-w-0 flex-1 space-y-1">
+                  <input
+                    type="text"
+                    value={item.caption}
+                    maxLength={CAPTION_MAX}
+                    disabled={busy}
+                    placeholder="Add a caption (optional)"
+                    aria-label={`Caption for ${item.file.name}`}
+                    onChange={(event) => update(item.id, { caption: event.target.value })}
+                    className={inputClass}
+                  />
+                  <p aria-hidden="true" className="text-right text-[13px] text-text">
+                    {item.caption.length}/{CAPTION_MAX}
                   </p>
-                )}
-                {item.status === 'error' && (
-                  <p role="alert" className="text-sm text-accent">
-                    {item.error}
-                  </p>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
+                  {item.status === 'uploading' && (
+                    <p role="status" className="text-[14px] text-text">
+                      Uploading…
+                    </p>
+                  )}
+                  {item.status === 'error' && (
+                    <p role="alert" className="text-[14px] text-danger">
+                      {item.error}
+                    </p>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
 
-        <div className="space-y-3 border-t border-border px-5 py-4">
-          <div className="space-y-2">
-            <label htmlFor="upload-collection" className="block font-heading text-text-h">
-              Add to a collection (optional)
-            </label>
-            <select
-              id="upload-collection"
-              value={choice}
-              disabled={busy}
-              onChange={(event) => setChoice(event.target.value)}
-              className={inputClass}
-            >
-              <option value="">No collection</option>
-              {collections.map((collection) => (
-                <option key={collection.id} value={collection.id}>
-                  {collection.title || 'Untitled collection'}
-                </option>
-              ))}
-            </select>
-            {collections.length === 0 && (
-              <p className="text-sm text-text">You have no collections yet.</p>
-            )}
-          </div>
+          {/* A rule rather than a second card: the sheet is one surface, and a
+              hairline is the only divider the system allows. */}
+          <div className="mt-4 space-y-3 border-t border-fill pt-4">
+            <div className="space-y-1.5">
+              <label htmlFor="upload-collection" className="text-[13px] font-medium text-text-h">
+                Add to a collection (optional)
+              </label>
+              <select
+                id="upload-collection"
+                value={choice}
+                disabled={busy}
+                onChange={(event) => setChoice(event.target.value)}
+                className={inputClass}
+              >
+                <option value="">No collection</option>
+                {collections.map((collection) => (
+                  <option key={collection.id} value={collection.id}>
+                    {collection.title || 'Untitled collection'}
+                  </option>
+                ))}
+              </select>
+              {collections.length === 0 && (
+                <p className="text-[14px] text-text">You have no collections yet.</p>
+              )}
+            </div>
 
-          <p className="text-sm text-text">
-            Photos are cropped to a square in the grid. With no caption, the upload date
-            is shown instead.
-          </p>
-          {notice && <p className="text-sm text-text">{notice}</p>}
-          <div className="flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={close}
-              disabled={busy}
-              className="rounded-md border border-border px-4 py-2 font-heading text-text-h disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => void upload()}
-              disabled={busy}
-              className="rounded-md bg-accent px-4 py-2 font-heading text-bg disabled:opacity-50"
-            >
-              {busy
-                ? 'Uploading…'
-                : hasError
-                  ? 'Try again'
-                  : `Upload ${items.length} photo${items.length === 1 ? '' : 's'}`}
-            </button>
+            <p className="text-[14px] text-text">
+              Photos are cropped to a square in the grid. With no caption, the upload date
+              is shown instead.
+            </p>
+            {notice && <p className="text-[14px] text-text">{notice}</p>}
+            <div className="flex justify-end gap-3">
+              <Button variant="secondary" onClick={close} disabled={busy}>
+                Cancel
+              </Button>
+              <Button onClick={() => void upload()} disabled={busy}>
+                {busy
+                  ? 'Uploading…'
+                  : hasError
+                    ? 'Try again'
+                    : `Upload ${items.length} photo${items.length === 1 ? '' : 's'}`}
+              </Button>
+            </div>
           </div>
         </div>
-      </dialog>
+      </Modal>
     </>
   )
 }

@@ -20,11 +20,9 @@ import type { PublicProfile, Relationship } from '../lib/people'
 import type { Crumb } from '../lib/schemas'
 import type { Collection } from '../lib/collectionSchemas'
 import { useAuth } from '../hooks/useAuth'
-
-const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
-const buttonClass = `rounded-md border border-border px-4 py-2 font-heading text-text-h disabled:opacity-50 ${focusRing}`
-const primaryClass = `rounded-md bg-accent px-4 py-2 font-heading text-bg disabled:opacity-50 ${focusRing}`
+import Button, { ButtonLink } from '../components/Button'
+import Squircle from '../components/Squircle'
+import { focusRing, RADIUS } from '../lib/ui'
 
 const joinFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'long' })
 
@@ -64,38 +62,38 @@ function FriendActions({
     switch (profile.relationship) {
       case 'friends':
         return (
-          <button
+          <Button
             type="button"
+            variant="secondary"
             disabled={busy}
             onClick={() =>
               void act(async () => {
                 await removeFriend(profile.id)
               }, 'none')
             }
-            className={buttonClass}
           >
             {busy ? 'Working…' : 'Remove friend'}
-          </button>
+          </Button>
         )
       case 'request_sent':
         return (
-          <button
+          <Button
             type="button"
+            variant="secondary"
             disabled={busy}
             onClick={() =>
               void act(async () => {
                 await declineFriendRequest(profile.requestId as string)
               }, 'none')
             }
-            className={buttonClass}
           >
             {busy ? 'Working…' : 'Cancel request'}
-          </button>
+          </Button>
         )
       case 'request_received':
         return (
           <span className="flex flex-wrap gap-2">
-            <button
+            <Button
               type="button"
               disabled={busy}
               onClick={() =>
@@ -103,27 +101,26 @@ function FriendActions({
                   await acceptFriendRequest(profile.requestId as string)
                 }, 'friends')
               }
-              className={primaryClass}
             >
               {busy ? 'Working…' : 'Accept request'}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="secondary"
               disabled={busy}
               onClick={() =>
                 void act(async () => {
                   await declineFriendRequest(profile.requestId as string)
                 }, 'none')
               }
-              className={buttonClass}
             >
               Decline
-            </button>
+            </Button>
           </span>
         )
       default:
         return (
-          <button
+          <Button
             type="button"
             disabled={busy}
             onClick={() =>
@@ -131,10 +128,9 @@ function FriendActions({
                 await sendFriendRequest(profile.id)
               }, 'request_sent')
             }
-            className={primaryClass}
           >
             {busy ? 'Working…' : 'Add friend'}
-          </button>
+          </Button>
         )
     }
   })()
@@ -143,7 +139,7 @@ function FriendActions({
     <div className="space-y-2">
       {body}
       {error && (
-        <p role="alert" className="text-sm text-accent">
+        <p role="alert" className="text-[15px] text-danger">
           {error}
         </p>
       )}
@@ -172,12 +168,12 @@ function SignOut() {
 
   return (
     <div className="space-y-2">
-      <button type="button" onClick={() => void signOut()} disabled={busy} className={buttonClass}>
+      <Button variant="secondary" onClick={() => void signOut()} disabled={busy}>
         {busy ? 'Signing out…' : 'Sign out'}
-      </button>
+      </Button>
       <div aria-live="polite">
         {error && (
-          <p role="alert" className="text-sm text-accent">
+          <p role="alert" className="text-[15px] text-danger">
             {error}
           </p>
         )}
@@ -268,12 +264,15 @@ export default function PublicProfilePage() {
 
   if (loadError) {
     return (
-      <section className="space-y-4">
-        <h1 className="my-0!">Profile</h1>
-        <p role="alert" className="text-accent">
+      <section className="mx-auto max-w-md space-y-4">
+        <h1 className="text-[28px] font-semibold tracking-heading text-text-h">Profile</h1>
+        <p role="alert" className="text-[15px] text-danger">
           {loadError}
         </p>
-        <Link to="/collections" className="text-accent underline">
+        <Link
+          to="/collections"
+          className="rounded text-accent underline underline-offset-4"
+        >
           Back to collections
         </Link>
       </section>
@@ -283,7 +282,7 @@ export default function PublicProfilePage() {
   if (!profile) {
     return (
       <section>
-        <p role="status" className="text-text">
+        <p role="status" className="text-[15px] text-text">
           Loading…
         </p>
       </section>
@@ -296,28 +295,32 @@ export default function PublicProfilePage() {
     <section className="space-y-6">
       <header className="flex flex-wrap items-start justify-between gap-6">
         <div className="flex items-center gap-4">
-          <Avatar user={profile} className="size-20 text-2xl" />
+          <div className="size-20 shrink-0 text-2xl">
+            <Avatar user={profile} />
+          </div>
           <div className="space-y-1 text-left">
-            <h1 className="my-0! text-3xl">{displayName}</h1>
-            <p className="text-text">
+            <h1 className="text-[28px] font-semibold tracking-heading text-text-h">
+              {displayName}
+            </h1>
+            <p className="text-[15px] text-text">
               @{profile.username}
               {profile.username !== displayName ? ` · ${displayName}` : ''}
             </p>
-            <p className="text-sm text-text">{joinedOn(profile.createdAt)}</p>
+            <p className="text-[14px] text-text">{joinedOn(profile.createdAt)}</p>
             {profile.friendsCount !== null &&
               (profile.isSelf ? (
-                <p className="text-sm">
+                <p className="text-[14px]">
                   <button
                     type="button"
                     onClick={() => setFriendsOpen(true)}
-                    className={`rounded text-accent underline ${focusRing}`}
+                    className={`rounded text-accent underline underline-offset-4 ${focusRing}`}
                   >
                     {profile.friendsCount}{' '}
                     {profile.friendsCount === 1 ? 'friend' : 'friends'}
                   </button>
                 </p>
               ) : (
-                <p className="text-sm text-text">
+                <p className="text-[14px] text-text">
                   {profile.friendsCount}{' '}
                   {profile.friendsCount === 1 ? 'friend' : 'friends'}
                 </p>
@@ -330,12 +333,12 @@ export default function PublicProfilePage() {
 
           {profile.isSelf && (
             <>
-              <Link to="/edit-profile" className={buttonClass}>
+              <ButtonLink to="/edit-profile" variant="secondary">
                 Edit profile
-              </Link>
-              <Link to="/crumbs" className={buttonClass}>
+              </ButtonLink>
+              <ButtonLink to="/crumbs" variant="secondary">
                 My crumbs
-              </Link>
+              </ButtonLink>
               <SignOut />
             </>
           )}
@@ -343,8 +346,11 @@ export default function PublicProfilePage() {
       </header>
 
       {profile.isSelf && (
-        <p className="text-left text-sm text-text">
-          <Link to="/collections" className="text-accent underline">
+        <p className="text-left text-[15px] text-text">
+          <Link
+            to="/collections"
+            className="rounded text-accent underline underline-offset-4"
+          >
             My collections
           </Link>
         </p>
@@ -353,41 +359,53 @@ export default function PublicProfilePage() {
       {canSeePrivate && (
         <>
           <section aria-labelledby="profile-crumbs-heading" className="space-y-3 text-left">
-            <h2 id="profile-crumbs-heading" className="text-xl">
+            <h2 id="profile-crumbs-heading" className="text-[17px] font-semibold tracking-heading text-text-h">
               {profile.isSelf ? 'Your crumbs' : 'Crumbs'}
             </h2>
 
             {crumbs === null ? (
-              <p role="status" className="text-text">
+              <p role="status" className="text-[15px] text-text">
                 Loading crumbs…
               </p>
             ) : crumbs.length === 0 ? (
-              <p className="text-text">
+              <p className="text-[15px] text-text">
                 {profile.isSelf ? 'You have no crumbs yet.' : 'No crumbs.'}
               </p>
             ) : (
               <>
-                <ul className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-                  {crumbs.slice(0, 12).map((crumb) => (
+                <ul className="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-6">
+                  {crumbs.slice(0, 12).map((crumb, index) => (
                     <li key={crumb.id}>
                       <button
                         type="button"
                         onClick={() => setSelected(crumb)}
                         aria-label={crumbLabel(crumb) || 'Open crumb'}
-                        className={`block aspect-square w-full cursor-pointer overflow-hidden ${focusRing}`}
+                        className={`block w-full cursor-pointer transition duration-200 ease-ios hover:brightness-[0.97] ${focusRing}`}
                       >
-                        <img
-                          src={crumbSrc(crumb.imageUrl)}
-                          alt=""
-                          loading="lazy"
-                          className="size-full object-cover"
-                        />
+                        {/* A gentle scatter, so the grid reads as a pile of
+                            memories rather than a spreadsheet. The rotation is
+                            per-item and small enough that no two neighbours
+                            share a tilt. */}
+                        <Squircle
+                          radius={RADIUS.media}
+                          className="overflow-hidden bg-fill"
+                          style={{
+                            transform: `rotate(${index % 3 === 1 ? -2.5 : index % 3 === 2 ? 2.5 : 0}deg)`,
+                          }}
+                        >
+                          <img
+                            src={crumbSrc(crumb.imageUrl)}
+                            alt=""
+                            loading="lazy"
+                            className="aspect-square w-full object-cover"
+                          />
+                        </Squircle>
                       </button>
                     </li>
                   ))}
                 </ul>
                 {crumbs.length > 12 && (
-                  <p className="text-sm text-text">and {crumbs.length - 12} more.</p>
+                  <p className="text-[14px] text-text">and {crumbs.length - 12} more.</p>
                 )}
               </>
             )}
@@ -397,20 +415,20 @@ export default function PublicProfilePage() {
             aria-labelledby="profile-collections-heading"
             className="space-y-3 text-left"
           >
-            <h2 id="profile-collections-heading" className="text-xl">
+            <h2 id="profile-collections-heading" className="text-[17px] font-semibold tracking-heading text-text-h">
               {profile.isSelf ? 'Your collections' : 'Shared collections'}
             </h2>
 
             {collections === null ? (
-              <p role="status" className="text-text">
+              <p role="status" className="text-[15px] text-text">
                 Loading collections…
               </p>
             ) : collections.length === 0 ? (
-              <p className="text-text">
+              <p className="text-[15px] text-text">
                 {profile.isSelf ? 'No collections yet.' : 'Nothing shared with you.'}
               </p>
             ) : (
-              <ul className="grid gap-4 sm:grid-cols-2">
+              <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {collections.map((collection) => (
                   <li key={collection.id}>
                     <CollectionCard collection={collection} />
@@ -423,7 +441,7 @@ export default function PublicProfilePage() {
       )}
 
       {!canSeePrivate && (
-        <p className="text-left text-sm text-text">
+        <p className="text-left text-[15px] text-text">
           Crumbs and shared collections are only visible to friends.
         </p>
       )}

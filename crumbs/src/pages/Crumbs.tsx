@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import CrumbCanvas from '../components/CrumbCanvas'
 import CrumbUploader from '../components/CrumbUploader'
 import CrumbViewer from '../components/CrumbViewer'
@@ -7,9 +6,6 @@ import { fetchCrumbs } from '../lib/crumbs'
 import { fetchCollectionOptions } from '../lib/collections'
 import type { Crumb } from '../lib/schemas'
 import type { CollectionOption } from '../lib/collections'
-
-const linkClass =
-  'text-accent underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
 
 export default function Crumbs() {
   const [crumbs, setCrumbs] = useState<Crumb[]>([])
@@ -56,20 +52,13 @@ export default function Crumbs() {
   }, [])
 
   return (
-    <section className="flex flex-col gap-6 pb-24">
-      <nav aria-label="Page" className="flex items-center justify-between px-6">
-        <Link to="/" className={linkClass}>
-          Home
-        </Link>
-        <Link to="/profile" className={linkClass}>
-          Profile
-        </Link>
-      </nav>
-
-      <h1 className="px-6 text-4xl font-heading text-text-h">Crumbs</h1>
+    <section className="flex flex-col gap-6">
+      {/* Hidden rather than stacked: the canvas is the page, and a heading above
+          it would only push the photos down the viewport. */}
+      <h1 className="sr-only">Crumbs</h1>
 
       {loadError && (
-        <p role="alert" className="px-6 text-accent">
+        <p role="alert" className="text-[15px] text-danger">
           {loadError}
         </p>
       )}

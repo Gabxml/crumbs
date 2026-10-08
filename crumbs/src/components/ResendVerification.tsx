@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ApiError } from '../lib/api'
 import { resendVerification } from '../lib/auth'
+import Button from './Button'
 
 // Asking for a new confirmation link. The server always answers the same way,
 // whether or not the address is on file, so this cannot be used to probe.
@@ -25,24 +26,19 @@ export default function ResendVerification({ email }: { email: string }) {
   }
 
   return (
-    <div className="space-y-2 text-left">
+    <div className="space-y-2">
       {done ? (
-        <p role="status" className="text-sm text-text">
+        <p role="status" className="text-[15px] text-text">
           If that account exists, a new link is on its way.
         </p>
       ) : (
-        <button
-          type="button"
-          onClick={() => void send()}
-          disabled={busy}
-          className="rounded-md border border-border px-4 py-2 font-heading text-text-h disabled:opacity-50"
-        >
+        <Button variant="secondary" onClick={() => void send()} disabled={busy}>
           {busy ? 'Sending…' : 'Send another link'}
-        </button>
+        </Button>
       )}
 
       {error && (
-        <p role="alert" className="text-sm text-accent">
+        <p role="alert" className="text-[15px] text-danger">
           {error}
         </p>
       )}

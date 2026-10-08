@@ -20,12 +20,14 @@ import type {
   Sort,
   WidgetType,
 } from '../lib/collectionSchemas'
+import Button from '../components/Button'
+import Card from '../components/Card'
+import Chip from '../components/Chip'
+import Field from '../components/Field'
+import { focusRing } from '../lib/ui'
 
-const inputClass =
-  'w-full rounded-md border border-border bg-bg px-3 py-2 font-sans text-text outline-none focus-visible:border-accent'
-const labelClass = 'block font-heading text-text-h'
-const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
+const selectClass =
+  'w-full rounded-control bg-fill px-4 py-2.5 text-[15px] text-text-h outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
 
 const SCOPE_LABELS: Record<Scope, string> = {
   all: 'Everything',
@@ -77,20 +79,21 @@ function Toggles<T extends string>({
         : [...selected, value],
     )
 
+  // Chips rather than checkboxes: these are the same kind of choice the
+  // Collections page already makes with pills, and the selected state reads at
+  // a glance from the accent tint.
   return (
-    <fieldset className="space-y-2 text-left">
-      <legend className={labelClass}>{legend}</legend>
-      <div className="flex flex-wrap gap-x-4 gap-y-1">
+    <fieldset className="space-y-2">
+      <legend className="text-[13px] font-medium text-text-h">{legend}</legend>
+      <div className="flex flex-wrap gap-2">
         {options.map((option) => (
-          <label key={option} className="flex items-center gap-2 text-sm text-text">
-            <input
-              type="checkbox"
-              checked={selected.includes(option)}
-              onChange={() => toggle(option)}
-              className="size-4 accent-[var(--accent)]"
-            />
+          <Chip
+            key={option}
+            selected={selected.includes(option)}
+            onClick={() => toggle(option)}
+          >
             {labels?.[option] ?? option}
-          </label>
+          </Chip>
         ))}
       </div>
     </fieldset>
@@ -180,24 +183,20 @@ export default function Search() {
 
   return (
     <section className="space-y-6">
-      <h1 className="my-0!">Search</h1>
+      <h1 className="text-[28px] font-semibold tracking-heading text-text-h">Search</h1>
 
       {/* One box for everything. Collections search every word in a collection;
           people search usernames. Both run off this same query. */}
-      <div className="space-y-1 text-left">
-        <label htmlFor="search-q" className={labelClass}>
-          Search collections and people
-        </label>
-        <input
-          id="search-q"
+      <div className="text-left">
+        <Field
+          label="Search collections and people"
           type="search"
           value={filters.q}
           onChange={(event) => set('q', event.target.value)}
           placeholder="trip budget, or a username"
           autoComplete="off"
-          className={inputClass}
         />
-        <p className="text-xs text-text">
+        <p className="mt-1.5 text-[13px] text-text">
           {peopleRequested
             ? 'Every word must appear in a collection. People are matched on username.'
             : term.length > PEOPLE_MAX
@@ -208,25 +207,28 @@ export default function Search() {
 
       {/* These narrow the collections half only, which is why they are tucked
           away and labelled as such. */}
-      <details className="rounded-lg border border-border text-left">
-        <summary className={`cursor-pointer px-4 py-3 font-heading text-text-h ${focusRing}`}>
+      <Card className="p-0">
+        <details>
+        <summary
+          className={`cursor-pointer px-5 py-4 text-[15px] font-medium text-text-h ${focusRing}`}
+        >
           Filters for collections
           {activeFilterCount > 0 && (
-            <span className="ml-2 text-sm text-text">({activeFilterCount} on)</span>
+            <span className="ml-2 text-[14px] text-text">({activeFilterCount} on)</span>
           )}
         </summary>
 
-        <div className="space-y-4 border-t border-border p-4">
+        <div className="space-y-4 px-5 pb-5">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1">
-              <label htmlFor="search-scope" className={labelClass}>
+            <div className="space-y-1.5">
+              <label htmlFor="search-scope" className="text-[13px] font-medium text-text-h">
                 Whose
               </label>
               <select
                 id="search-scope"
                 value={filters.scope}
                 onChange={(event) => set('scope', event.target.value as Scope)}
-                className={inputClass}
+                className={selectClass}
               >
                 {SCOPES.map((scope) => (
                   <option key={scope} value={scope}>
@@ -236,15 +238,15 @@ export default function Search() {
               </select>
             </div>
 
-            <div className="space-y-1">
-              <label htmlFor="search-sort" className={labelClass}>
+            <div className="space-y-1.5">
+              <label htmlFor="search-sort" className="text-[13px] font-medium text-text-h">
                 Sort by
               </label>
               <select
                 id="search-sort"
                 value={filters.sort}
                 onChange={(event) => set('sort', event.target.value as Sort)}
-                className={inputClass}
+                className={selectClass}
               >
                 {SORT_OPTIONS.map((sort) => (
                   <option key={sort} value={sort}>
@@ -272,31 +274,31 @@ export default function Search() {
           />
 
           <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
+            <Button
+              variant="secondary"
               onClick={() => setFilters(DEFAULT_FILTERS)}
-              className={`rounded-md border border-border px-4 py-2 font-heading text-text-h ${focusRing}`}
             >
               Clear filters
-            </button>
+            </Button>
           </div>
         </div>
-      </details>
+        </details>
+      </Card>
 
       {busy && (
-        <p role="status" className="text-text">
+        <p role="status" className="text-[15px] text-text">
           Searching…
         </p>
       )}
 
       {collectionError && (
-        <p role="alert" className="text-accent">
+        <p role="alert" className="text-[15px] text-danger">
           {collectionError}
         </p>
       )}
 
       <section aria-labelledby="collections-results" className="space-y-3">
-        <h2 id="collections-results" className="text-xl">
+        <h2 id="collections-results" className="text-[17px] font-semibold tracking-heading text-text-h">
           {pagination
             ? `Collections (${pagination.total})`
             : results === null
@@ -305,16 +307,16 @@ export default function Search() {
         </h2>
 
         {results === null ? (
-          <p className="text-text">Loading…</p>
+          <p className="text-[15px] text-text">Loading…</p>
         ) : results.length === 0 ? (
-          <p className="text-text">
+          <p className="text-[15px] text-text">
             {term
               ? 'No collections matched.'
               : 'No collections yet. Start one from the Collections page.'}
           </p>
         ) : (
           <>
-            <ul className="grid gap-4 sm:grid-cols-2">
+            <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {results.map((collection) => (
                 <li key={collection.id}>
                   <CollectionCard collection={collection} />
@@ -324,25 +326,25 @@ export default function Search() {
 
             {pagination && pagination.totalPages > 1 && (
               <nav aria-label="Collection pages" className="flex items-center justify-center gap-3">
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={() => goToPage(pagination.page - 1)}
                   disabled={pagination.page <= 1}
-                  className={`rounded-md border border-border px-3 py-1 font-heading text-text-h disabled:opacity-50 ${focusRing}`}
                 >
                   Previous
-                </button>
-                <span className="text-sm text-text">
+                </Button>
+                <span className="text-[14px] text-text">
                   Page {pagination.page} of {pagination.totalPages}
                 </span>
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={() => goToPage(pagination.page + 1)}
                   disabled={pagination.page >= pagination.totalPages}
-                  className={`rounded-md border border-border px-3 py-1 font-heading text-text-h disabled:opacity-50 ${focusRing}`}
                 >
                   Next
-                </button>
+                </Button>
               </nav>
             )}
           </>
@@ -350,28 +352,30 @@ export default function Search() {
       </section>
 
       <section aria-labelledby="people-results" className="space-y-3">
-        <h2 id="people-results" className="text-xl">
+        <h2 id="people-results" className="text-[17px] font-semibold tracking-heading text-text-h">
           {peopleRequested ? `People (${people.length})` : 'People'}
         </h2>
 
         {peopleError && (
-          <p role="alert" className="text-accent">
+          <p role="alert" className="text-[15px] text-danger">
             {peopleError}
           </p>
         )}
 
         {!peopleRequested ? (
-          <p className="text-text">
+          <p className="text-[15px] text-text">
             Type at least {PEOPLE_MIN} characters to look for people by username.
           </p>
         ) : people.length === 0 ? (
-          <p className="text-text">No one with that username.</p>
+          <p className="text-[15px] text-text">No one with that username.</p>
         ) : (
-          <ul className="divide-y divide-border rounded-lg border border-border">
-            {people.map((hit) => (
-              <PersonRow key={hit.id} hit={hit} />
-            ))}
-          </ul>
+          <Card className="p-0">
+            <ul>
+              {people.map((hit) => (
+                <PersonRow key={hit.id} hit={hit} />
+              ))}
+            </ul>
+          </Card>
         )}
       </section>
     </section>
