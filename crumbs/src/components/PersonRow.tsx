@@ -50,7 +50,7 @@ export default function PersonRow({ hit }: { hit: SearchHit }) {
   return (
     <li className="flex flex-wrap items-center gap-3 px-4 py-3">
       <div className="size-10 shrink-0">
-        <Avatar user={withUsername(hit)} />
+        <Avatar user={withUsername(hit)} to={profilePath(hit.username)} />
       </div>
 
       <span className="min-w-0 flex-1">

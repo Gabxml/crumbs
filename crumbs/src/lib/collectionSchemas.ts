@@ -90,6 +90,17 @@ export const collectionListSchema = z.object({
   pagination: paginationSchema,
 })
 
+// The Upcoming filter is a window of dates rather than a page of results: the
+// server answers with the range it looked at, and there is no next page to ask
+// for. So this list is not paginated and must not be parsed as collectionListSchema.
+export const upcomingSchema = z.object({
+  from: z.string(),
+  to: z.string(),
+  collections: z.array(collectionSchema),
+})
+
+export type Upcoming = z.infer<typeof upcomingSchema>
+
 export const collectionPayloadSchema = z.object({
   collection: collectionSchema,
   widgets: z.array(z.unknown()),

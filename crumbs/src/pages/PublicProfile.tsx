@@ -2,8 +2,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import Avatar from '../components/Avatar'
 import FriendsDialog from '../components/FriendsDialog'
+import SuggestedFriends from '../components/SuggestedFriends'
 import CrumbViewer from '../components/CrumbViewer'
-import CollectionCard from '../components/CollectionCard'
+import FolderCard from '../components/FolderCard'
+import SignOutButton from '../components/SignOutButton'
 import { ApiError } from '../lib/api'
 import { crumbLabel, crumbSrc } from '../lib/crumbs'
 import { fullName } from '../lib/user'
@@ -19,7 +21,6 @@ import {
 import type { PublicProfile, Relationship } from '../lib/people'
 import type { Crumb } from '../lib/schemas'
 import type { Collection } from '../lib/collectionSchemas'
-import { useAuth } from '../hooks/useAuth'
 import Button, { ButtonLink } from '../components/Button'
 import Squircle from '../components/Squircle'
 import { focusRing, RADIUS } from '../lib/ui'
@@ -147,39 +148,11 @@ function FriendActions({
   )
 }
 
-// Only rendered on your own profile, where it is the way out of the app.
+// Only rendered on your own profile, where it is the way out of the app. The
+// sidebar carries the same button, so this is the second way in rather than the
+// only one.
 function SignOut() {
-  const { logout } = useAuth()
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const signOut = async () => {
-    setBusy(true)
-    setError(null)
-    try {
-      await logout()
-    } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : 'Could not sign you out. Try again.',
-      )
-      setBusy(false)
-    }
-  }
-
-  return (
-    <div className="space-y-2">
-      <Button variant="secondary" onClick={() => void signOut()} disabled={busy}>
-        {busy ? 'Signing out…' : 'Sign out'}
-      </Button>
-      <div aria-live="polite">
-        {error && (
-          <p role="alert" className="text-[15px] text-danger">
-            {error}
-          </p>
-        )}
-      </div>
-    </div>
-  )
+  return <SignOutButton variant="button" />
 }
 
 export default function PublicProfilePage() {
@@ -292,21 +265,23 @@ export default function PublicProfilePage() {
   const displayName = fullName(profile) || profile.username
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 pt-10">
       <header className="flex flex-wrap items-start justify-between gap-6">
         <div className="flex items-center gap-4">
-          <div className="size-20 shrink-0 text-2xl">
-            <Avatar user={profile} />
+          <div className="size-36 shrink-0 text-2xl">
+            <Avatar user={profile} className='!text-6xl' />
           </div>
-          <div className="space-y-1 text-left">
-            <h1 className="text-[28px] font-semibold tracking-heading text-text-h">
+          {/* One block of text at four sizes, so it is set tight: the name's own
+              line-height at 48px would otherwise put a third of its height of
+              empty leading under it and drop the handle a whole line away. */}
+          <div className="text-left">
+            <h1 className="text-[32px] leading-[1.05] font-semibold tracking-heading text-text-h">
               {displayName}
             </h1>
-            <p className="text-[15px] text-text">
+            <p className="-mt-0.5 text-[20px] text-text">
               @{profile.username}
-              {profile.username !== displayName ? ` · ${displayName}` : ''}
             </p>
-            <p className="text-[14px] text-text">{joinedOn(profile.createdAt)}</p>
+            <p className="-mt-0.5 text-[14px] text-text">{joinedOn(profile.createdAt)}</p>
             {profile.friendsCount !== null &&
               (profile.isSelf ? (
                 <p className="text-[14px]">
@@ -333,11 +308,8 @@ export default function PublicProfilePage() {
 
           {profile.isSelf && (
             <>
-              <ButtonLink to="/edit-profile" variant="secondary">
+              <ButtonLink to="/edit-profile" variant="outline">
                 Edit profile
-              </ButtonLink>
-              <ButtonLink to="/crumbs" variant="secondary">
-                My crumbs
               </ButtonLink>
               <SignOut />
             </>
@@ -345,16 +317,7 @@ export default function PublicProfilePage() {
         </div>
       </header>
 
-      {profile.isSelf && (
-        <p className="text-left text-[15px] text-text">
-          <Link
-            to="/collections"
-            className="rounded text-accent underline underline-offset-4"
-          >
-            My collections
-          </Link>
-        </p>
-      )}
+      {profile.isSelf && <SuggestedFriends />}
 
       {canSeePrivate && (
         <>
@@ -376,18 +339,32 @@ export default function PublicProfilePage() {
                 <ul className="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-6">
                   {crumbs.slice(0, 12).map((crumb, index) => (
                     <li key={crumb.id}>
+                      {/* The shadow sits on the button rather than on the Squircle inside it: that
+                        one is clipped to its superellipse, which would take the
+                        shadow with it. The button is the same box, so it lands
+                        in the same place.
+
+                        A small one, not the crumb shadow the canvas uses: these
+                        are packed into a grid a few pixels apart, where a wide
+                        diffuse shadow would read as each photo floating free of
+                        its neighbours. Here it only has to give a white photo an
+                        edge against the grey canvas. */}
                       <button
                         type="button"
                         onClick={() => setSelected(crumb)}
                         aria-label={crumbLabel(crumb) || 'Open crumb'}
-                        className={`block w-full cursor-pointer transition duration-200 ease-ios hover:brightness-[0.97] ${focusRing}`}
+                        className={`block w-full cursor-pointer rounded-grid shadow-sm transition duration-200 ease-ios hover:brightness-[0.97] ${focusRing}`}
                       >
                         {/* A gentle scatter, so the grid reads as a pile of
                             memories rather than a spreadsheet. The rotation is
                             per-item and small enough that no two neighbours
                             share a tilt. */}
+                        {/* RADIUS.grid, between the canvas tile and the small
+                            thumbnails: at 3 columns on a phone these are about
+                            100px, so tile's 40px would be 40% of the width and
+                            read as a lozenge rather than a rounded square. */}
                         <Squircle
-                          radius={RADIUS.media}
+                          radius={RADIUS.grid}
                           className="overflow-hidden bg-fill"
                           style={{
                             transform: `rotate(${index % 3 === 1 ? -2.5 : index % 3 === 2 ? 2.5 : 0}deg)`,
@@ -428,10 +405,14 @@ export default function PublicProfilePage() {
                 {profile.isSelf ? 'No collections yet.' : 'Nothing shared with you.'}
               </p>
             ) : (
-              <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {collections.map((collection) => (
                   <li key={collection.id}>
-                    <CollectionCard collection={collection} />
+                    {/* A small shadow, not the floating one the collections page
+                        uses: these sit in a tight grid beside the crumb and
+                        suggestion sections, where a wide shadow is only a rim on
+                        every photo. Matches the crumb tiles above. */}
+                    <FolderCard collection={collection} tileShadow="shadow-sm" />
                   </li>
                 ))}
               </ul>

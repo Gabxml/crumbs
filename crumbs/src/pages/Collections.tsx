@@ -1,25 +1,16 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import CollectionCard from '../components/CollectionCard'
-import Button, { ButtonLink } from '../components/Button'
+import { useNavigate } from 'react-router-dom'
+import FolderCard from '../components/FolderCard'
 import Chip from '../components/Chip'
-import Field from '../components/Field'
+import Fab from '../components/Fab'
 import { ApiError } from '../lib/api'
 import {
   createCollection,
-  deleteCollection,
   fetchUpcoming,
   searchCollections,
-  setCollectionStatus,
   DEFAULT_FILTERS,
 } from '../lib/collections'
-import { STATUS_LABELS } from '../lib/collectionSchemas'
-import type { Collection, CollectionStatus } from '../lib/collectionSchemas'
-
-// A native select, restyled to the system's control shape: subtle fill, no
-// border, squircle corners.
-const selectClass =
-  'rounded-control bg-fill px-3 py-2 text-[13px] text-text-h outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
+import type { Collection } from '../lib/collectionSchemas'
 
 type Filter = 'all' | 'mine' | 'shared' | 'upcoming'
 const FILTERS: { value: Filter; label: string }[] = [
@@ -29,99 +20,6 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: 'upcoming', label: 'Upcoming' },
 ]
 
-function StatusSelect({
-  collection,
-  onChanged,
-}: {
-  collection: Collection
-  onChanged: (updated: Collection) => void
-}) {
-  // The server sends only the moves allowed right now, so an impossible one is
-  // never offered.
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  if (collection.nextStatuses.length === 0) return null
-
-  const move = async (status: CollectionStatus) => {
-    setBusy(true)
-    setError(null)
-    try {
-      onChanged(await setCollectionStatus(collection.id, status))
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not change the status.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <span className="text-right">
-      <label className="sr-only" htmlFor={`status-${collection.id}`}>
-        Status for {collection.title || 'this collection'}
-      </label>
-      <select
-        id={`status-${collection.id}`}
-        value={collection.status}
-        disabled={busy}
-        onChange={(event) => void move(event.target.value as CollectionStatus)}
-        className={selectClass}
-      >
-        <option value={collection.status}>{STATUS_LABELS[collection.status]}</option>
-        {collection.nextStatuses.map((status) => (
-          <option key={status} value={status}>
-            {STATUS_LABELS[status]}
-          </option>
-        ))}
-      </select>
-      {error && (
-        <span role="alert" className="mt-1 block max-w-56 text-[13px] text-danger">
-          {error}
-        </span>
-      )}
-    </span>
-  )
-}
-
-function DeleteButton({
-  collection,
-  onDeleted,
-}: {
-  collection: Collection
-  onDeleted: (id: string) => void
-}) {
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const remove = async () => {
-    const name = collection.title || 'this collection'
-    if (!window.confirm(`Delete "${name}"? This cannot be undone.`)) return
-
-    setBusy(true)
-    setError(null)
-    try {
-      await deleteCollection(collection.id)
-      onDeleted(collection.id)
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not delete it.')
-      setBusy(false)
-    }
-  }
-
-  return (
-    <span className="text-right">
-      <Button variant="danger" size="sm" onClick={() => void remove()} disabled={busy}>
-        {busy ? 'Deleting…' : 'Delete'}
-      </Button>
-      {error && (
-        <span role="alert" className="mt-1 block max-w-56 text-[13px] text-danger">
-          {error}
-        </span>
-      )}
-    </span>
-  )
-}
-
 export default function Collections() {
   const navigate = useNavigate()
   const [filter, setFilter] = useState<Filter>('all')
@@ -130,7 +28,6 @@ export default function Collections() {
   // stale, so the page shows "Loading" instead of the old results.
   const [shownFilter, setShownFilter] = useState<Filter | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [title, setTitle] = useState('')
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
 
@@ -166,26 +63,15 @@ export default function Collections() {
     }
   }, [filter])
 
-  const replace = (updated: Collection) =>
-    setCollections((current) =>
-      current?.map((item) => (item.id === updated.id ? updated : item)) ?? current,
-    )
-
-  const drop = (id: string) =>
-    setCollections((current) => current?.filter((item) => item.id !== id) ?? current)
-
-  const create = async (event: React.FormEvent) => {
-    event.preventDefault()
-    const trimmed = title.trim()
-    if (!trimmed) return
-
+  // A new collection is opened straight away, empty, and titled where it is
+  // filled in. It stays "new" — out of every list — until something is put in
+  // it, and the page it opens on deletes it again if nothing is, so a stray
+  // click leaves nothing behind.
+  const create = async (title = '') => {
     setCreating(true)
     setCreateError(null)
     try {
-      // A collection opens as "new", which the server keeps out of every list
-      // until it holds something. So we go straight to it rather than showing
-      // a card that would vanish on the next load.
-      const created = await createCollection({ title: trimmed })
+      const created = await createCollection({ title })
       navigate(`/collections/${created.id}`)
     } catch (error) {
       setCreateError(
@@ -197,28 +83,15 @@ export default function Collections() {
 
   return (
     <section className="space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
+      <header className="flex flex-wrap items-baseline justify-between gap-4">
         <h1 className="text-[28px] font-semibold tracking-heading text-text-h">Collections</h1>
-        <ButtonLink to="/collections/new" variant="secondary">
-          New collection
-        </ButtonLink>
+        {collections !== null && (
+          <span className="text-[14px] text-text">
+            {collections.length === 1 ? '1 collection' : `${collections.length} collections`}
+          </span>
+        )}
       </header>
 
-      {/* items-end lines the button's baseline with the input rather than the
-          label, so the pair sits together without a magic offset. */}
-      <form onSubmit={create} className="flex flex-wrap items-end gap-3">
-        <Field
-          label="Start a new collection"
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          placeholder="Weekend hike"
-          maxLength={80}
-          className="min-w-56 flex-1"
-        />
-        <Button type="submit" disabled={creating || !title.trim()}>
-          {creating ? 'Creating…' : 'Create'}
-        </Button>
-      </form>
       {createError && (
         <p role="alert" className="text-[15px] text-danger">
           {createError}
@@ -244,40 +117,43 @@ export default function Collections() {
           Loading collections…
         </p>
       ) : collections.length === 0 ? (
-        <p className="text-[15px] text-text">
-          {filter === 'upcoming'
-            ? 'Nothing coming up in the next 30 days.'
-            : filter === 'shared'
-              ? 'Nothing has been shared with you.'
-              : filter === 'mine'
-                ? 'You have not created any collections.'
-                : 'No collections yet.'}{' '}
+        <div className="rounded-card border-2 border-dashed border-inactive px-6 py-12 text-center">
+          <p className="text-[15px] text-text">
+            {filter === 'upcoming'
+              ? 'Nothing coming up in the next 30 days.'
+              : filter === 'shared'
+                ? 'Nothing has been shared with you.'
+                : filter === 'mine'
+                  ? 'You have not created any collections.'
+                  : 'No collections yet.'}
+          </p>
           {filter !== 'upcoming' && filter !== 'shared' && (
-            <Link
-              to="/collections/new"
-              className="rounded text-accent underline underline-offset-4"
+            <button
+              type="button"
+              onClick={() => void create()}
+              disabled={creating}
+              className="mt-2 rounded text-accent underline underline-offset-4 disabled:opacity-40"
             >
               Start one
-            </Link>
+            </button>
           )}
-        </p>
+        </div>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {collections.map((collection) => (
             <li key={collection.id}>
-              <CollectionCard
-                collection={collection}
-                action={<StatusSelect collection={collection} onChanged={replace} />}
-                footerAction={
-                  collection.role === 'owner' ? (
-                    <DeleteButton collection={collection} onDeleted={drop} />
-                  ) : null
-                }
-              />
+              <FolderCard collection={collection} />
             </li>
           ))}
         </ul>
       )}
+
+      {/* The same button the Crumbs page uses to add a photo, for the same
+          reason: making a new one is the one action on this page that is not
+          about something already here, so it belongs on the glass rather than
+          taking up a tile in the grid. It opens an empty collection straight
+          away rather than a form to fill in first. */}
+      <Fab label="New collection" onClick={() => void create()} disabled={creating} />
     </section>
   )
 }

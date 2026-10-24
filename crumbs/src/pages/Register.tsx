@@ -5,9 +5,11 @@ import { useForm } from 'react-hook-form'
 import { ApiError } from '../lib/api'
 import { useAuth } from '../hooks/useAuth'
 import ResendVerification from '../components/ResendVerification'
+import AuthSplit from '../components/AuthSplit'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import Field from '../components/Field'
+import Wordmark from '../components/Wordmark'
 import { registerSchema } from '../lib/schemas'
 import type { RegisterInput } from '../lib/schemas'
 
@@ -52,88 +54,99 @@ export default function Register() {
 
   if (created) {
     return (
-      <section className="mx-auto max-w-md space-y-6">
-        <h1 className="text-[28px] font-semibold tracking-heading text-text-h">
-          Check your email
-        </h1>
+      <AuthSplit mode="register">
+        <div className="space-y-6">
+          <Wordmark />
 
-        <Card className="space-y-4">
+          <h1 className="text-[28px] font-semibold tracking-heading text-text-h">
+            Check your email
+          </h1>
+
+          <Card className="space-y-4 gap-6 flex flex-col">
+            <p className="text-[15px] text-text">
+              {created.emailSent ? (
+                <>
+                  We sent a confirmation link to <strong>{created.email}</strong>. Open it
+                  to finish setting up your account.
+                </>
+              ) : (
+                <>
+                  Your account was created, but the confirmation email could not be sent.
+                  Nothing is lost — ask for another link below.
+                </>
+              )}
+            </p>
+            <p className="text-[15px] text-text">
+              The link works once and expires in 24 hours. Until you use it you cannot sign
+              in.
+            </p>
+
+            <ResendVerification email={created.email} />
+          </Card>
+
           <p className="text-[15px] text-text">
-            {created.emailSent ? (
-              <>
-                We sent a confirmation link to <strong>{created.email}</strong>. Open it to
-                finish setting up your account.
-              </>
-            ) : (
-              <>
-                Your account was created, but the confirmation email could not be sent.
-                Nothing is lost — ask for another link below.
-              </>
-            )}
+            <Link to="/login" className="rounded text-accent underline underline-offset-4">
+              Back to sign in
+            </Link>
           </p>
-          <p className="text-[15px] text-text">
-            The link works once and expires in 24 hours. Until you use it you cannot sign in.
-          </p>
-
-          <ResendVerification email={created.email} />
-        </Card>
-
-        <p className="text-[15px] text-text">
-          <Link to="/login" className="rounded text-accent underline underline-offset-4">
-            Back to sign in
-          </Link>
-        </p>
-      </section>
+        </div>
+      </AuthSplit>
     )
   }
 
   return (
-    <section className="mx-auto max-w-md space-y-6">
-      <h1 className="text-[28px] font-semibold tracking-heading text-text-h">Sign up</h1>
+    <AuthSplit mode="register">
+      <div className="space-y-6">
+        {/* The mark is the only way out of a page with no navigation on it, so it
+            is a link home rather than a picture of the app's name. */}
+        <Wordmark />
 
-      <Card className="space-y-5">
-        {formError && (
-          <p role="alert" className="text-[15px] text-danger">
-            {formError}
-          </p>
-        )}
+        <h1 className="text-[28px] font-semibold tracking-heading text-text-h">Sign up</h1>
 
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-          <Field
-            label="Username"
-            type="text"
-            autoComplete="username"
-            {...register('username')}
-            error={errors.username?.message}
-          />
+        <Card className="space-y-5">
+          {formError && (
+            <p role="alert" className="text-[15px] text-danger">
+              {formError}
+            </p>
+          )}
 
-          <Field
-            label="Email"
-            type="email"
-            autoComplete="email"
-            {...register('email')}
-            error={errors.email?.message}
-          />
+          <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+            <Field
+              label="Username"
+              type="text"
+              autoComplete="username"
+              {...register('username')}
+              error={errors.username?.message}
+            />
 
-          <Field
-            label="Password"
-            type="password"
-            autoComplete="new-password"
-            {...register('password')}
-            error={errors.password?.message}
-          />
+            <Field
+              label="Email"
+              type="email"
+              autoComplete="email"
+              {...register('email')}
+              error={errors.email?.message}
+            />
 
-          <Button type="submit" disabled={isSubmitting} className="w-full">
-            {isSubmitting ? 'Creating account…' : 'Create account'}
-          </Button>
-        </form>
-      </Card>
+            <Field
+              label="Password"
+              type="password"
+              autoComplete="new-password"
+              {...register('password')}
+              error={errors.password?.message}
+            />
 
-      <p className="text-[15px] text-text">
-        <Link to="/login" className="rounded text-accent underline underline-offset-4">
-          Already have an account?
-        </Link>
-      </p>
-    </section>
+            <Button type="submit" disabled={isSubmitting} className="w-full">
+              {isSubmitting ? 'Creating account…' : 'Create account'}
+            </Button>
+          </form>
+        </Card>
+
+        <p className="text-[15px] text-text">
+          <Link to="/login" className="rounded text-accent underline underline-offset-4">
+            Already have an account?
+          </Link>
+        </p>
+      </div>
+    </AuthSplit>
   )
 }

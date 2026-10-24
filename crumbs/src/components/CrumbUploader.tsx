@@ -4,7 +4,8 @@ import { uploadCrumb } from '../lib/crumbs'
 import { resizeToFit } from '../lib/image'
 import type { Crumb } from '../lib/schemas'
 import type { CollectionOption } from '../lib/collections'
-import { Plus } from '@untitledui/icons/Plus'
+import Fab from './Fab'
+import Select from './Select'
 import Button from './Button'
 import Modal from './Modal'
 
@@ -125,17 +126,7 @@ export default function CrumbUploader({
 
   return (
     <>
-      <button
-        type="button"
-        aria-label="Add crumbs"
-        onClick={() => inputRef.current?.click()}
-        // A circle, not a squircle: this is the one element that floats over the
-        // canvas, and the diffuse shadow is what separates it from the photos.
-        // It sits above the mobile tab bar, hence the raised bottom offset.
-        className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-5 z-20 grid size-14 place-items-center rounded-full bg-accent text-on-accent shadow-float transition duration-200 ease-ios active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent lg:bottom-8"
-      >
-        <Plus size={26} strokeWidth={2} />
-      </button>
+      <Fab label="Add crumbs" onClick={() => inputRef.current?.click()} />
 
       <input
         ref={inputRef}
@@ -194,12 +185,12 @@ export default function CrumbUploader({
               <label htmlFor="upload-collection" className="text-[13px] font-medium text-text-h">
                 Add to a collection (optional)
               </label>
-              <select
+              <Select
                 id="upload-collection"
+                className="w-full"
                 value={choice}
                 disabled={busy}
                 onChange={(event) => setChoice(event.target.value)}
-                className={inputClass}
               >
                 <option value="">No collection</option>
                 {collections.map((collection) => (
@@ -207,15 +198,14 @@ export default function CrumbUploader({
                     {collection.title || 'Untitled collection'}
                   </option>
                 ))}
-              </select>
+              </Select>
               {collections.length === 0 && (
                 <p className="text-[14px] text-text">You have no collections yet.</p>
               )}
             </div>
 
             <p className="text-[14px] text-text">
-              Photos are cropped to a square in the grid. With no caption, the upload date
-              is shown instead.
+              Photos are cropped to a square in the grid. Adding this to your collection retains its original aspect ratio
             </p>
             {notice && <p className="text-[14px] text-text">{notice}</p>}
             <div className="flex justify-end gap-3">

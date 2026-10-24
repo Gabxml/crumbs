@@ -11,6 +11,10 @@ const DESCRIPTION_MAX = 500
 const TAGS_MAX = 8
 const TAG_MAX = 24
 
+// The fan an empty folder would show, drawn at the size it will actually appear
+// so the preview is the real thing rather than a picture of it.
+const PREVIEW_TILT = [-5, 4, -3]
+
 export default function AddCollection() {
   const navigate = useNavigate()
   const [title, setTitle] = useState('')
@@ -61,6 +65,25 @@ export default function AddCollection() {
         New collection
       </h1>
 
+      {/* What you are about to make, at the size it will be made: three empty
+          cards leaning against each other, with the title underneath. */}
+      <div className="flex flex-col items-center gap-2 rounded-card border-2 border-dashed border-inactive px-6 py-8">
+        <div className="flex h-[156px] w-full items-center justify-center px-1">
+          {PREVIEW_TILT.map((tilt, index) => (
+            <div
+              key={tilt}
+              style={{ '--fan-rotate': `${tilt}deg` } as React.CSSProperties}
+              className={`h-[130px] w-[30%] shrink-0 rounded-control bg-fill ${
+                index > 0 ? '-ml-[9%]' : ''
+              } rotate-(--fan-rotate)`}
+            />
+          ))}
+        </div>
+        <p className="max-w-full truncate text-[16px] font-semibold tracking-heading text-text-h">
+          {title.trim() || 'Untitled collection'}
+        </p>
+      </div>
+
       <Card>
       <form onSubmit={submit} className="space-y-5" noValidate>
         <Field
@@ -100,7 +123,7 @@ export default function AddCollection() {
               }}
               maxLength={TAG_MAX}
               placeholder="outdoors, then press Enter"
-              className="w-full rounded-control bg-fill px-4 py-2.5 text-[15px] text-text-h placeholder:text-inactive outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              className="w-full rounded-full bg-fill px-4 py-2.5 text-[15px] text-text-h placeholder:text-inactive outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             />
             <Button
               variant="secondary"
@@ -122,7 +145,7 @@ export default function AddCollection() {
                     onClick={() => setTags((current) => current.filter((item) => item !== tag))}
                     className="inline-flex items-center gap-1.5 rounded-full bg-accent-tint px-3 py-1 text-[13px] font-medium text-on-accent transition duration-200 ease-ios focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.97]"
                   >
-                    {tag} ×
+                    #{tag} ×
                   </button>
                 </li>
               ))}

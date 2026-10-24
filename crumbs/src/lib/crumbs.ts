@@ -4,6 +4,7 @@ import { crumbRecordSchema, crumbUploadResponseSchema } from './schemas'
 import type { Crumb, CrumbResult } from './schemas'
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'long' })
+const postedFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
 
 export { assetUrl as crumbSrc } from './api'
 
@@ -15,8 +16,16 @@ export function crumbLabel(crumb: Crumb): string {
   return Number.isNaN(date.getTime()) ? '' : dateFormat.format(date)
 }
 
-export async function fetchCrumbs(): Promise<Crumb[]> {
-  const { data } = await api.get('/api/crumbs')
+// The day it was uploaded, for somewhere that also says who posted it — the
+// caption and the date are alternatives to each other, but the attribution is
+// not, so the two sit side by side rather than one standing in for the other.
+export function crumbPosted(crumb: Crumb): string {
+  const date = new Date(crumb.createdAt)
+  return Number.isNaN(date.getTime()) ? '' : postedFormat.format(date)
+}
+
+export async function fetchCrumbs(scope: 'mine' | 'all' = 'mine'): Promise<Crumb[]> {
+  const { data } = await api.get('/api/crumbs', { params: { scope } })
   return z.object({ crumbs: z.array(crumbRecordSchema) }).parse(data).crumbs
 }
 

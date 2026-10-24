@@ -22,8 +22,27 @@
   --radius-card: 30px;
   --radius-media: 20px;
   --radius-control: 16px;
+  /* Canvas tiles only. A crumb is the biggest shape on the screen and the one
+     seen most often, so it carries a radius well past what the rest of the app
+     uses; media stays at 20px for the small thumbnails where a bigger curve
+     would eat the picture.
+
+     Must stay equal to RADIUS.tile in lib/ui.ts. This value drives the curve
+     where the browser draws it natively, that one drives the clip-path
+     everywhere else — if they drift, the two browsers disagree.
+
+     At 80px this clamps to a full circle on the smallest tile a phone gets
+     (MIN_TILE is 120px, and a radius at or past half the box is a pill). Every
+     larger size keeps a curve. That is the intended look at the breakpoint
+     where two tiles fill the screen. */
+  --radius-tile: 80px;
+  /* The other two crumb surfaces. The canvas owns --radius-tile and generates no
+     utility for it, but the grid's shadow sits on a button outside the Squircle
+     inside it and has to trace the same curve, so this one needs a utility. */
+  --radius-grid: 28px;
 
   --shadow-float: var(--shadow-float-value);
+  --shadow-crumb: var(--shadow-crumb-value);
 
   --tracking-heading: -0.015em;
 
@@ -40,7 +59,7 @@
      dark column is layered on underneath where the browser can resolve it. */
   --text-h: #111111;
   --text: #8e8e93;
-  --bg: #f2f2f2;
+  --bg: #f5f5f5;
   --surface: #ffffff;
   --inactive: #c7c7cc;
   --fill: #efefef;
@@ -52,9 +71,20 @@
   --success: #2f8f60;
   --code-bg: #efefef;
 
+  /* The wordmark is the one piece of the app allowed to be the accent itself:
+     on light grey it is the only thing on the page that is the brand colour. */
+  --wordmark: var(--accent);
+
   /* Depth comes from white-on-grey layering, so the one shadow in the system
      is reserved for things that genuinely float over that layering. */
   --shadow-float-value: 0 8px 24px rgba(0, 0, 0, 0.1);
+
+  /* A crumb is a photograph on a flat canvas, and the canvas carries no depth of
+     its own — so without a shadow a white photo on light grey, or a black one on
+     near-black, has no edge at all. Two soft layers rather than one hard one: a
+     tight contact shadow where the photo meets the canvas, and a wide diffuse
+     one under it. */
+  --shadow-crumb-value: 0 2px 6px rgba(0, 0, 0, 0.08), 0 10px 24px rgba(0, 0, 0, 0.1);
 
   /* -apple-system first so Apple devices get real SF Pro; everyone else falls
      back to the bundled Inter Variable. */
@@ -101,9 +131,20 @@
     --success: #6fcb9b;
     --code-bg: #3a3a3c;
 
+    /* White rather than the accent: on a near-black rail the accent is already
+       the loudest thing in the app, and a logo that competes with the buttons
+       reads as one of them. */
+    --wordmark: #ffffff;
+
     /* A shadow is invisible against a near-black canvas, so elevation in dark
        is carried entirely by the surface step. */
     --shadow-float-value: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+    /* A crumb still needs an edge it can be seen by, and here the canvas is
+       darker than most photos. So the contact shadow is joined by a hairline of
+       light: a black photo then has a rim, and a white one still lifts off the
+       background. */
+    --shadow-crumb-value: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 10px 28px rgba(0, 0, 0, 0.6);
   }
 }
 
@@ -116,8 +157,10 @@
   --fill: #3a3a3c;
   --danger: #f09184;
   --success: #6fcb9b;
-  --code-bg: #3a3a3c;
+  --code-bg: #1f1f21;
+  --wordmark: #ffffff;
   --shadow-float-value: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-crumb-value: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 10px 28px rgba(0, 0, 0, 0.6);
 }
 
 /* --- Shape ---------------------------------------------------------------- */
@@ -137,29 +180,52 @@
   .rounded-3xl,
   .rounded-card,
   .rounded-media,
-  .rounded-control {
+  .rounded-control,
+  .rounded-grid {
     corner-shape: squircle;
   }
 }
 
-/* The <Squircle> component paints the true superellipse with an inline
-   clip-path, which is what Safari and Firefox need since neither ships
-   corner-shape yet. This is only used on the large surfaces — cards, media,
-   sheets — where the difference between an arc and a superellipse is actually
-   visible; below about 16px the two are indistinguishable, and a 16px button
-   would not repay a clip-path plus a ResizeObserver. The !important is
-   required because the library sets clip-path inline. */
+/* The crumbs canvas is the one surface with an unbounded number of instances of
+   the same shape, so it cannot afford a Squircle each. Instead one path is
+   generated for the tile size and handed down through --tile-clip, and every
+   tile inherits it: a few hundred tiles cost one string, not a few hundred
+   resize listeners and path generations.
+
+   The two are mutually exclusive on purpose. A border-radius here would clip to
+   a circular arc, and clip-path intersects with whatever else clips the box —
+   and a superellipse bulges outside an arc of the same radius, so the arc would
+   win and the tile would stay round. Whichever the browser can draw natively
+   gets the box to itself.
+
+   The `none` fallback covers the first paint before React has measured the
+   canvas, and leaves a plain rectangle rather than an invalid declaration. */
 @supports (corner-shape: squircle) {
-  .sq-clip {
-    clip-path: none !important;
+  .canvas-tile-body {
+    overflow: hidden;
+    border-radius: var(--radius-tile);
+    corner-shape: squircle;
   }
 }
+
+@supports not (corner-shape: squircle) {
+  .canvas-tile-body {
+    clip-path: var(--tile-clip, none);
+  }
+}
+
+
 
 /* --- Sheets --------------------------------------------------------------- */
 
 dialog.sheet {
   border: 0;
-  margin: 0;
+  /* margin: auto is the UA's own centring for a modal dialog — fixed position,
+     pinned to all four edges, then pushed to the middle by its margins. The
+     reset zeroes it, which drops the dialog into the top-left corner the moment
+     it is given a width, so it is put back here rather than left to the reset.
+     Everything below then aligns the panel inside a box that is already centred. */
+  margin: auto;
   padding: 0;
   background: transparent;
   color: var(--text);
@@ -182,6 +248,15 @@ dialog.sheet[open] {
   dialog.sheet[open] {
     align-items: center;
   }
+}
+
+/* Some dialogs are not sheets at all but a thing to look at — a picture at full
+   size, a form with room to type — and those stay in the middle of the screen at
+   every width. One extra class beats the rules above on specificity, which is why
+   this is a stylesheet rule and not an `items-center` utility on the element. */
+dialog.sheet.centred[open],
+dialog.sheet.centred:not([open]) {
+  align-items: center;
 }
 
 dialog.sheet::backdrop {
@@ -259,4 +334,51 @@ code {
 @utility fade-bottom {
   -webkit-mask-image: linear-gradient(to bottom, #000 60%, transparent 100%);
   mask-image: linear-gradient(to bottom, #000 60%, transparent 100%);
+}
+
+/* A sideways strip scrolls with a swipe or a trackpad but shows no track: the
+   cut-off card is the affordance, and on iOS a visible scrollbar would sit on
+   top of the cards themselves. */
+@utility scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* A strip that runs off both ends. The mask dissolves the tiles into the page
+   rather than cutting them at the edge, so a row of ten reads as ten that carry
+   on rather than as ten that stop. The fade is pinned to the element, not the
+   content, so it stays put while the strip scrolls under it — and because the
+   masked strip is still the full width of its container, the two ends are always
+   faded whether or not there is anything more to scroll to. */
+@utility fade-edges {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 1rem,
+    #000 calc(100% - 1rem),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 1.0rem,
+    #000 calc(100% - 1rem),
+    transparent 100%
+  );
+}
+
+/* The wordmark is seven black strokes on a transparent ground, which would leave
+   it invisible on a dark canvas. So the file is used as a mask and the mark is
+   painted in `--wordmark` — the accent on light, white on dark. One asset, and
+   the theme decides its colour the way it decides everything else. The aspect
+   ratio is the file's own, so the box needs no height of its own. */
+@utility wordmark {
+  aspect-ratio: 199 / 47;
+  background-color: var(--wordmark);
+  -webkit-mask: url('/wordmark_logo.svg') center / contain no-repeat;
+  mask: url('/wordmark_logo.svg') center / contain no-repeat;
 }

@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { api } from './api'
 import { crumbRecordSchema } from './schemas'
-import { collectionSchema } from './collectionSchemas'
+import { collectionSchema, personSchema } from './collectionSchemas'
 import type { Collection } from './collectionSchemas'
 
 // How the signed-in user is connected to the person whose profile is open.
@@ -94,4 +94,27 @@ export type SearchHit = z.infer<typeof searchHitSchema>
 export async function searchPeople(q: string): Promise<SearchHit[]> {
   const { data } = await api.get('/api/friends/search', { params: { q } })
   return z.object({ users: z.array(searchHitSchema) }).parse(data).users
+}
+
+// ---- Suggested friends -------------------------------------------------------
+
+// A person the server picked out, plus why: "2 mutual friends", "1 shared
+// collection", or "New on Crumbs". The reason is what makes the suggestion
+// legible — a row of strangers with no explanation is just noise.
+export const suggestionSchema = personSchema.extend({ reason: z.string() })
+
+export type Suggestion = z.infer<typeof suggestionSchema>
+
+// How many the profile page shows, which is all the server sends. It is trimmed
+// here rather than there: a bigger "see everyone" surface can raise the server's
+// own limit without the ranking changing underneath it.
+export const SUGGESTION_COUNT = 10
+
+// People you might know. Every one is by definition a stranger — the server
+// leaves out yourself, your friends and anyone with a request already pending —
+// so there is no relationship to report and no Add-friend button to disable.
+export async function fetchSuggestions(): Promise<Suggestion[]> {
+  const { data } = await api.get('/api/friends/suggestions')
+  const { suggestions } = z.object({ suggestions: z.array(suggestionSchema) }).parse(data)
+  return suggestions.slice(0, SUGGESTION_COUNT)
 }

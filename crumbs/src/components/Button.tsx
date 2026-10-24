@@ -3,12 +3,17 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react'
 import { focusRing, pressable } from '../lib/ui'
 
 // Three fills, no gradients and no shadows: primary is the accent, secondary is
-// the subtle fill, tertiary is text alone.
+// the subtle fill, tertiary is text alone. The two outlines are the same idea for
+// the cases that need to be readable on a flat page without adding a filled block
+// to it — secondary is too quiet against light grey, so the edge is what carries
+// the button, and the destructive one borrows the danger colour for both.
 const variantClass = {
   primary: 'bg-accent text-on-accent hover:bg-accent-press',
   secondary: 'bg-fill text-text-h hover:brightness-[0.97]',
   tertiary: 'text-accent hover:bg-accent-tint',
   danger: 'bg-fill text-danger hover:brightness-[0.97]',
+  outline: 'border border-inactive text-text-h hover:border-text-h hover:bg-fill',
+  'outline-danger': 'border border-danger text-danger hover:bg-danger/10',
 } as const
 
 const sizeClass = {

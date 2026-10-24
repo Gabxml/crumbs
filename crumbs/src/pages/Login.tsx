@@ -6,9 +6,11 @@ import { ApiError } from '../lib/api'
 import { UnverifiedEmailError } from '../lib/auth'
 import { useAuth } from '../hooks/useAuth'
 import ResendVerification from '../components/ResendVerification'
+import AuthSplit from '../components/AuthSplit'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import Field from '../components/Field'
+import Wordmark from '../components/Wordmark'
 import { loginSchema } from '../lib/schemas'
 import type { LoginInput } from '../lib/schemas'
 
@@ -59,19 +61,24 @@ export default function Login() {
   }
 
   return (
-    <section className="mx-auto max-w-md space-y-6">
-      <h1 className="text-[28px] font-semibold tracking-heading text-text-h">Log in</h1>
+    <AuthSplit mode="login">
+      <div className="space-y-6">
+        {/* The mark is the only way out of a page with no navigation on it, so it
+            is a link home rather than a picture of the app's name. */}
+        <Wordmark />
 
-      <Card className="space-y-5">
-        {unconfirmedEmail ? (
-          <div className="space-y-3">
-            <p role="alert" className="text-[15px] font-medium text-danger">
-              Confirm your email address before signing in.
-            </p>
-            <p className="text-[15px] text-text">
-              Open the link we sent to {unconfirmedEmail}, or ask for another one.
-            </p>
-            <ResendVerification email={unconfirmedEmail} />
+        <h1 className="text-[28px] font-semibold tracking-heading text-text-h">Log in</h1>
+
+        <Card className="space-y-5">
+          {unconfirmedEmail ? (
+            <div className="space-y-3">
+              <p role="alert" className="text-[15px] font-medium text-danger">
+                Confirm your email address before signing in.
+              </p>
+              <p className="text-[15px] text-text">
+                Open the link we sent to {unconfirmedEmail}, or ask for another one.
+              </p>
+              <ResendVerification email={unconfirmedEmail} />
           </div>
         ) : formError ? (
           <p role="alert" className="text-[15px] text-danger">
@@ -117,6 +124,7 @@ export default function Login() {
           Forgot password
         </Link>
       </p>
-    </section>
+      </div>
+    </AuthSplit>
   )
 }

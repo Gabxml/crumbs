@@ -40,8 +40,8 @@ export default function VerifyEmail() {
   }, [token, updateUser])
 
   return (
-    <section className="mx-auto max-w-md space-y-6">
-      <h1 className="text-[28px] font-semibold tracking-heading text-text-h">
+    <section className="mx-auto max-w-md space-y-6" >
+      <h1 className="text-[28px] font-semibold tracking-heading text-text-h flex flex-col">
         {state === 'done' ? 'Account confirmed' : 'Confirming your email'}
       </h1>
 

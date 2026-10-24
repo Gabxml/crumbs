@@ -89,6 +89,11 @@ export type Friend = z.infer<typeof friendSchema>
 
 export const crumbRecordSchema = z.object({
   id: z.string(),
+  // Who posted it, so the viewer can name them. Nullish rather than required
+  // because it is decoration: an API that has not been redeployed since this
+  // field was added must not take the whole timeline down over it, so the crumb
+  // still parses and the viewer simply shows no name.
+  userId: z.string().nullish(),
   imageUrl: z.string(),
   caption: z.string(),
   collectionId: z.string().nullish(),

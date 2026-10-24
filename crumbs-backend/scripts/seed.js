@@ -11,8 +11,6 @@
 // again at any time.
 // Like reset-sandbox.js, it refuses to touch anything but the sandbox database.
 
-const fs = require("node:fs");
-const path = require("node:path");
 const zlib = require("node:zlib");
 const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
@@ -20,7 +18,6 @@ const mongoose = require("mongoose");
 process.loadEnvFile();
 
 const { SANDBOX_DB_NAME, getDatabaseName } = require("../config/database");
-const { UPLOAD_DIR, PUBLIC_UPLOAD_PATH } = require("../config/uploads");
 const User = require("../models/User");
 const Collection = require("../models/Collection");
 const Friendship = require("../models/Friendship");
@@ -97,18 +94,20 @@ const PALETTES = [
 ];
 
 let imageCounter = 0;
+// Returns the bytes rather than writing a file: pictures live inside the
+// documents that own them (see models/Image.js), so the sandbox restores from the
+// database alone with no uploads/ folder to go missing.
 function seedImage(label) {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-  const filename = `seed-${imageCounter}.png`;
   const [from, to] = PALETTES[imageCounter % PALETTES.length];
   imageCounter += 1;
-  fs.writeFileSync(path.join(UPLOAD_DIR, filename), makeGradientPng(480, 320, from, to));
+  const data = makeGradientPng(480, 320, from, to);
+
   return {
-    filename,
+    data,
     originalName: `${label}.png`,
-    url: `${PUBLIC_UPLOAD_PATH}/${filename}`,
     mimeType: "image/png",
-    size: fs.statSync(path.join(UPLOAD_DIR, filename)).size,
+    size: data.length,
+    uploadedAt: new Date(),
   };
 }
 
@@ -248,6 +247,34 @@ const SAMPLE_EVENTS = [
 
 const PEOPLE = ["mika", "jon", "ana"];
 
+// Sample people who are deliberately NOT connected to you at all, so the
+// profile page's "People you may know" section has something to show. Their
+// friendships with each other are arranged to give the ranking something to
+// work with: nia is two of your friends' friends, remy/kai/sol are one each,
+// and bea/ivo are nobody's friend, which is what the "New on Crumbs" reason is
+// for.
+const STRANGERS = ["remy", "nia", "kai", "sol", "bea", "ivo"];
+
+// Every friendship this script creates, in one list, so clearOldData() and
+// createFriendships() cannot drift apart: a pair missing from the delete would
+// trip the unique pairKey index the next time the seed is run.
+const ACCEPTED_FRIENDSHIPS = [
+  ["me", "mika"],
+  ["me", "jon"],
+  ["mika", "jon"],
+  ["mika", "remy"],
+  ["mika", "nia"],
+  ["jon", "nia"],
+  ["jon", "kai"],
+  ["ana", "sol"],
+  ["ana", "bea"],
+  ["remy", "bea"],
+];
+
+// Ana has asked to be your friend; accept it in the app to try the flow. She is
+// therefore not suggested to you, which is the point.
+const PENDING_REQUESTS = [["ana", "me"]];
+
 async function findOrCreateUser(email) {
   if (email) {
     const user = await User.findOne({ email: email.toLowerCase() });
@@ -282,19 +309,20 @@ async function clearOldData(users) {
   await Widget.deleteMany({ collectionId: { $in: ids } });
   await Collection.deleteMany({ _id: { $in: ids } });
 
-  const { me, mika, jon, ana } = users;
-  const pairs = [[me, mika], [me, jon], [me, ana], [mika, jon]];
-  await Friendship.deleteMany({ pairKey: { $in: pairs.map(([a, b]) => pairKeyFor(a._id, b._id)) } });
+  const pairs = [...ACCEPTED_FRIENDSHIPS, ...PENDING_REQUESTS];
+  await Friendship.deleteMany({
+    pairKey: { $in: pairs.map(([a, b]) => pairKeyFor(users[a]._id, users[b]._id)) },
+  });
   return ids.length;
 }
 
-async function createFriendships({ me, mika, jon, ana }) {
-  const accepted = [[me, mika], [me, jon], [mika, jon]];
-  for (const [a, b] of accepted) {
-    await Friendship.create({ requester: a._id, recipient: b._id, status: "accepted" });
+async function createFriendships(users) {
+  for (const [a, b] of ACCEPTED_FRIENDSHIPS) {
+    await Friendship.create({ requester: users[a]._id, recipient: users[b]._id, status: "accepted" });
   }
-  // Ana has asked to be your friend; accept it in the app to try the flow.
-  await Friendship.create({ requester: ana._id, recipient: me._id, status: "pending" });
+  for (const [a, b] of PENDING_REQUESTS) {
+    await Friendship.create({ requester: users[a]._id, recipient: users[b]._id, status: "pending" });
+  }
 }
 
 async function createCollection(sample, users, stamp) {
@@ -332,8 +360,13 @@ async function seed() {
   await Promise.all([Collection.syncIndexes(), Widget.syncIndexes(), Friendship.syncIndexes()]);
 
   const me = await findOrCreateUser(process.argv[2]);
-  const [mika, jon, ana] = await Promise.all(PEOPLE.map(findOrCreatePerson));
-  const users = { me, mika, jon, ana };
+  // .map(findOrCreatePerson) would pass the array index as a second argument.
+  const people = [...PEOPLE, ...STRANGERS];
+  const created = await Promise.all(people.map((name) => findOrCreatePerson(name)));
+  const users = { me };
+  people.forEach((name, i) => {
+    users[name] = created[i];
+  });
 
   const removed = await clearOldData(users);
   if (removed) console.log(`Removed ${removed} existing sample collection(s)`);
@@ -348,7 +381,8 @@ async function seed() {
   }
 
   console.log(`Seeded ${SAMPLE_EVENTS.length} collections for ${me.email} (${dbName}).`);
-  console.log("Friends: mika, jon. Pending request from: ana. Sample people use Password123!");
+  console.log("Friends: mika, jon. Pending request from: ana. Suggested to you: remy, nia, kai, sol, bea, ivo.");
+  console.log("All sample people use Password123!");
   await mongoose.disconnect();
 }
 

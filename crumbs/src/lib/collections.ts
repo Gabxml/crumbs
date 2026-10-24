@@ -9,6 +9,7 @@ import {
   createCollectionSchema,
   DEFAULT_FILTERS,
   searchFiltersSchema,
+  upcomingSchema,
   widgetSchema,
 } from './collectionSchemas'
 import type {
@@ -18,6 +19,7 @@ import type {
   CreateCollectionInput,
   Pagination,
   SearchFilters,
+  Upcoming,
   Widget,
 } from './collectionSchemas'
 
@@ -58,14 +60,14 @@ export async function searchCollections(filters: SearchFilters): Promise<{
   return collectionListSchema.parse(data)
 }
 
-export async function fetchUpcoming(days = 30, limit = 10): Promise<{
-  collections: Collection[]
-  pagination: Pagination
-}> {
+// Open collections happening within `days` of today, soonest first. The server
+// caps the list rather than paging it, and answers with the date range it
+// searched, so this returns that range alongside the collections.
+export async function fetchUpcoming(days = 30, limit = 10): Promise<Upcoming> {
   const { data } = await api.get('/api/collections/upcoming', {
     params: { days, limit },
   })
-  return collectionListSchema.parse(data)
+  return upcomingSchema.parse(data)
 }
 
 export async function fetchCollection(id: string): Promise<{
@@ -109,8 +111,22 @@ export async function setCollectionStatus(id: string, status: CollectionStatus):
   return collectionEnvelopeSchema.parse(data).collection
 }
 
-export async function deleteCollection(id: string): Promise<void> {
-  await api.delete(`/api/collections/${id}`)
+/**
+ * `keepalive` lets the request outlive the page, which is what a discard needs
+ * when it is fired from `pagehide`: the document is already on its way out and
+ * axios has no setting for it, so that one case goes out on fetch directly.
+ */
+export async function deleteCollection(id: string, keepalive = false): Promise<void> {
+  if (!keepalive) {
+    await api.delete(`/api/collections/${id}`)
+    return
+  }
+
+  await fetch(`${api.defaults.baseURL ?? ''}/api/collections/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+    keepalive: true,
+  })
 }
 
 export async function shareCollection(id: string, userId: string): Promise<Collection> {
@@ -118,9 +134,10 @@ export async function shareCollection(id: string, userId: string): Promise<Colle
   return collectionEnvelopeSchema.parse(data).collection
 }
 
-export async function unshareCollection(id: string, userId: string): Promise<Collection> {
-  const { data } = await api.delete(`/api/collections/${id}/collaborators/${userId}`)
-  return collectionEnvelopeSchema.parse(data).collection
+export async function unshareCollection(id: string, userId: string): Promise<void> {
+  // Answers with a message, not with the collection, so there is nothing to parse
+  // and callers must work out the new list of people themselves.
+  await api.delete(`/api/collections/${id}/collaborators/${userId}`)
 }
 
 export { DEFAULT_FILTERS, searchFiltersSchema }
@@ -128,12 +145,17 @@ export type { SearchFilters }
 
 // ---- Rows and widgets --------------------------------------------------------
 
+/**
+ * The row endpoints answer with the collection alone — a new row holds nothing,
+ * so there is nothing to send back about widgets — so this parses the envelope
+ * rather than the full collection-plus-widgets payload.
+ */
 export async function addRow(
   collectionId: string,
   name = '',
-): Promise<{ collection: Collection; widgets: unknown[] }> {
+): Promise<{ collection: Collection }> {
   const { data } = await api.post(`/api/collections/${collectionId}/rows`, { name })
-  return collectionPayloadSchema.parse(data)
+  return collectionEnvelopeSchema.parse(data)
 }
 
 export async function renameRow(

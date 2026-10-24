@@ -14,7 +14,7 @@ export default function Chip({
   className?: string
 } & Omit<React.ComponentPropsWithoutRef<'button'>, 'className'>) {
   const tone = selected
-    ? 'bg-accent-tint text-on-accent'
+    ? 'bg-accent text-on-accent'
     : 'bg-fill text-text hover:brightness-[0.97]'
 
   return (

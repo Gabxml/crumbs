@@ -283,7 +283,9 @@ function PhotoSection({ user }: { user: User }) {
             )}
           </div>
           <p className="text-[14px] text-text">
-            JPEG, PNG or WebP. Cropped to a square and saved right away.
+            JPEG, PNG, WebP or GIF. Cropped to a square and saved right away —
+            though an animated GIF keeps its frames, and is cropped when it is
+            displayed instead.
           </p>
         </div>
       </div>
@@ -291,7 +293,7 @@ function PhotoSection({ user }: { user: User }) {
       <input
         ref={inputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept="image/jpeg,image/png,image/webp,image/gif"
         onChange={handleFile}
         className="hidden"
       />
