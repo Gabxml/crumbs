@@ -64,6 +64,17 @@ export async function fetchHealth(): Promise<Health> {
 // picture silently fails to render. Absolute URLs are left alone.
 export function assetUrl(path: string | null | undefined): string | undefined {
   if (!path) return undefined
-  if (/^(https?:)?\/\//.test(path) || path.startsWith('data:')) return path
+
+  // Absolute picture URLs are only ever produced by the backend for link
+  // previews. Restricting the scheme means a bad value can never become a
+  // script URL if this helper is reused somewhere other than an <img src>.
+  if (/^https?:\/\//i.test(path)) return path
+
+  // Same-origin paths only. "//host" is protocol-relative and some browsers
+  // treat a backslash as a slash, so both could silently point off-site.
+  if (!path.startsWith('/') || path.startsWith('//') || path.includes('\\')) {
+    return undefined
+  }
+
   return `${api.defaults.baseURL ?? ''}${path}`
 }

@@ -33,10 +33,25 @@ export const usernameSchema = z
     'Username can only contain letters, numbers and underscores',
   )
 
+// bcrypt only reads the first 72 bytes of a password, so the API rejects
+// anything longer. Count bytes instead of characters to mirror the server:
+// "é" is two bytes in UTF-8.
+export const PASSWORD_MAX_BYTES = 72
+
+const utf8Length = (value: string) => new TextEncoder().encode(value).length
+
+export const passwordSchema = z
+  .string()
+  .min(8, 'Password must be at least 8 characters')
+  .refine(
+    (value) => utf8Length(value) <= PASSWORD_MAX_BYTES,
+    `Password must be at most ${PASSWORD_MAX_BYTES} bytes`,
+  )
+
 export const registerSchema = z.object({
   username: usernameSchema,
   email: z.string().trim().toLowerCase().email('Enter a valid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: passwordSchema,
 })
 
 export type RegisterInput = z.infer<typeof registerSchema>
@@ -67,7 +82,7 @@ export type ProfileInput = z.infer<typeof profileSchema>
 export const passwordChangeSchema = z
   .object({
     currentPassword: z.string().min(1, 'Enter your current password'),
-    newPassword: z.string().min(8, 'Password must be at least 8 characters'),
+    newPassword: passwordSchema,
     confirmPassword: z.string(),
   })
   .refine((v) => v.newPassword === v.confirmPassword, {

@@ -8,13 +8,11 @@ import Button, { ButtonLink } from '../components/Button'
 import Card from '../components/Card'
 import Field from '../components/Field'
 import { z } from 'zod'
+import { passwordSchema as newPasswordSchema } from '../lib/schemas'
 
 const passwordSchema = z
   .object({
-    newPassword: z
-      .string()
-      .min(8, 'Password must be at least 8 characters')
-      .max(200, 'That password is too long'),
+    newPassword: newPasswordSchema,
     confirmPassword: z.string(),
   })
   .refine((v) => v.newPassword === v.confirmPassword, {
