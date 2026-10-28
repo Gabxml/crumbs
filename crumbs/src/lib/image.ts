@@ -91,6 +91,11 @@ export async function resizeToSquare(file: File, size = 256): Promise<Blob> {
   )
 }
 
+export function uploadName(file: File, image: Blob): string {
+  if (image.type !== 'image/jpeg') return file.name
+  return `${file.name.replace(/\.[^./\\]+$/, '') || 'upload'}.jpg`
+}
+
 // Whole picture, just scaled down so uploads stay small.
 export async function resizeToFit(file: File, maxSide = 1600): Promise<Blob> {
   checkSource(file)

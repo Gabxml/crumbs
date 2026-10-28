@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { AlignLeft } from '@untitledui/icons/AlignLeft'
 import { Calendar } from '@untitledui/icons/Calendar'
 import { Link01 } from '@untitledui/icons/Link01'
@@ -245,8 +245,10 @@ export default function FolderCard({
    */
   tileShadow?: string
 }) {
+  const navigate = useNavigate()
   const { summary } = collection
   const tiles = summary.tiles.slice(0, 4)
+  const collectionUrl = `/collections/${collection.id}`
 
   // A folder with nothing photographed in it has no count worth printing.
   const memories =
@@ -256,9 +258,32 @@ export default function FolderCard({
         : `${summary.imageCount} memories`
       : null
 
+  const handleCardClick = (event: React.MouseEvent<HTMLElement>) => {
+    // Don't navigate if the user clicked on a link (like the title link or people)
+    const target = event.target as HTMLElement
+    if (target.closest('a')) {
+      return
+    }
+    navigate(collectionUrl)
+  }
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      navigate(collectionUrl)
+    }
+  }
+
   return (
-    <article className="bg-code-bg shadow-md rounded-3xl group flex h-full flex-col items-center gap-2 px-2 py-3">
-            <header className="mt-auto flex items-center self-end justify-center gap-2">
+    <article
+      className="bg-code-bg shadow-md rounded-3xl group flex h-full flex-col items-center gap-2 px-2 py-3 cursor-pointer"
+      onClick={handleCardClick}
+      onKeyDown={handleKeyDown}
+      role="link"
+      tabIndex={0}
+      aria-label={`Open collection ${collection.title || 'Untitled collection'}`}
+    >
+      <header className="mt-auto flex items-center self-end justify-center gap-2">
         <People owner={collection.owner} collaborators={collection.collaborators} />
       </header>
       <div className="flex h-[156px] w-full items-center justify-center px-1">
@@ -283,14 +308,15 @@ export default function FolderCard({
 
       <h3 className="min-w-0 text-[16px] font-semibold tracking-heading">
         <Link
-          to={`/collections/${collection.id}`}
+          to={collectionUrl}
           className={`block truncate text-text-h no-underline ${focusRing} ${hoverLift}`}
+          onClick={(e) => e.stopPropagation()}
         >
           {collection.title || 'Untitled collection'}
         </Link>
       </h3>
 
-{/* The line is reserved whether or not there is anything to put on it. The
+      {/* The line is reserved whether or not there is anything to put on it. The
           fan and everything under it is pushed to the bottom of the card, so a
           folder that has a count is a whole line taller than one that has
           nothing to say — and every line above it rides up by that line, landing
@@ -302,8 +328,6 @@ export default function FolderCard({
         {summary.collectionDate && memories && ' · '}
         {memories}
       </p>
-
-
     </article>
   )
 }

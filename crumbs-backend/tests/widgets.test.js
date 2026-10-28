@@ -36,7 +36,12 @@ User.findById = async () => ({ _id: ownerId, toPublic: () => ({}) });
 Widget.findById = (id) => {
   const doc = docs.get(String(id)) ?? null;
   return {
-    select: async () => doc,
+    select: async (projection) => {
+      if (!doc || /(?:^|\s)image(?:\s|$)/.test(projection)) return doc;
+      const copy = doc.toObject();
+      delete copy.image;
+      return copy;
+    },
     then: (resolve, reject) => Promise.resolve(doc).then(resolve, reject),
   };
 };
@@ -151,9 +156,9 @@ test("non-image files and SVGs are rejected and nothing is stored", async () => 
   assert.equal(storedPictures(), 0);
 });
 
-test("a file over 5 MB -> 413 and nothing stored", async () => {
+test("a file over 4 MB -> 413 and nothing stored", async () => {
   const widget = makeWidget("image");
-  const big = { data: Buffer.alloc(5 * 1024 * 1024 + 10), type: "image/png", name: "big.png" };
+  const big = { data: Buffer.alloc(4 * 1024 * 1024 + 10), type: "image/png", name: "big.png" };
   assert.equal((await send("POST", `/api/widgets/${widget._id}/image`, { files: [big] })).status, 413);
   assert.equal(storedPictures(), 0);
 });

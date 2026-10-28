@@ -35,9 +35,10 @@ export async function uploadCrumb(
   image: Blob,
   caption: string,
   collectionId: string | null = null,
+  filename = 'upload.jpg',
 ): Promise<CrumbResult> {
   const body = new FormData()
-  body.append('image', image, 'upload.jpg')
+  body.append('image', image, filename)
   const trimmed = caption.trim()
   if (trimmed) body.append('caption', trimmed)
   if (collectionId) body.append('collectionId', collectionId)

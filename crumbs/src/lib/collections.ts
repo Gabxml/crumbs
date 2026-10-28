@@ -225,9 +225,13 @@ export async function toggleChecklistItem(
 
 // Image widgets change their picture through their own endpoints: an image
 // widget is created empty and the file is put in separately.
-export async function uploadWidgetImage(widgetId: string, image: Blob): Promise<Widget> {
+export async function uploadWidgetImage(
+  widgetId: string,
+  image: Blob,
+  filename = 'upload.jpg',
+): Promise<Widget> {
   const body = new FormData()
-  body.append('image', image, 'upload.jpg')
+  body.append('image', image, filename)
 
   const { data } = await api.post(`/api/widgets/${widgetId}/image`, body)
   return z.object({ widget: widgetSchema }).parse(data).widget

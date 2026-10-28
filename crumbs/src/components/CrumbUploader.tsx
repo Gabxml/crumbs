@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { uploadCrumb } from '../lib/crumbs'
-import { resizeToFit } from '../lib/image'
+import { resizeToFit, uploadName } from '../lib/image'
 import type { Crumb } from '../lib/schemas'
 import type { CollectionOption } from '../lib/collections'
 import Fab from './Fab'
@@ -104,7 +104,12 @@ export default function CrumbUploader({
       update(item.id, { status: 'uploading', error: null })
       try {
         const image = await resizeToFit(item.file)
-        const result = await uploadCrumb(image, item.caption, collectionId)
+        const result = await uploadCrumb(
+          image,
+          item.caption,
+          collectionId,
+          uploadName(item.file, image),
+        )
         if (result.collectionCopyError) copyErrors.add(result.collectionCopyError)
         onUploaded(result.crumb)
         finished.add(item.id)

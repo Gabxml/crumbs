@@ -6,10 +6,11 @@ import tailwindcss from '@tailwindcss/vite'
 const DEFAULT_API = 'http://localhost:3000'
 
 function originOf(value: string | undefined): string {
+  if (!value) return ''
   try {
-    return new URL(value || DEFAULT_API).origin
+    return new URL(value).origin
   } catch {
-    return DEFAULT_API
+    return ''
   }
 }
 
@@ -29,7 +30,7 @@ function contentSecurityPolicy(apiOrigin: string, dev: boolean): string {
     "img-src 'self' data: blob: https: http:",
     "font-src 'self' data:",
     // The API is a different origin. HMR needs a websocket in development.
-    `connect-src 'self' ${apiOrigin}${dev ? ' ws:' : ''}`,
+    `connect-src 'self'${apiOrigin ? ` ${apiOrigin}` : ''}${dev ? ' ws:' : ''}`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -79,7 +80,11 @@ function cspPlugin(apiOrigin: string, dev: boolean): Plugin {
 export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const dev = command === 'serve'
-  const apiOrigin = originOf(env.VITE_API_BASE_URL)
+  const apiOrigin = env.VITE_API_BASE_URL
+    ? originOf(env.VITE_API_BASE_URL)
+    : dev
+      ? DEFAULT_API
+      : ''
 
   return {
     plugins: [react(), tailwindcss(), cspPlugin(apiOrigin, dev)],

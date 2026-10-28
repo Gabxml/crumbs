@@ -18,6 +18,7 @@ import Card from './Card'
 import DateCircle from './DateCircle'
 import Modal from './Modal'
 import { splitDate, tiltFor } from '../lib/dates'
+import { resizeToFit, uploadName } from '../lib/image'
 import { pressable, RADIUS } from '../lib/ui'
 
 const inputClass =
@@ -458,7 +459,8 @@ function ImageWidget({
     setBusy(true)
     setError(null)
     try {
-      onChange(await uploadWidgetImage(widget.id, file))
+      const image = await resizeToFit(file)
+      onChange(await uploadWidgetImage(widget.id, image, uploadName(file, image)))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not upload that picture.')
     } finally {

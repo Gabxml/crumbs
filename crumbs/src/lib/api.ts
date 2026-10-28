@@ -2,7 +2,9 @@ import axios from 'axios'
 import { healthSchema } from './schemas'
 import type { Health } from './schemas'
 
-const baseURL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000'
+const baseURL =
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.DEV ? 'http://localhost:3000' : '')
 
 // No default Content-Type. Axios sets `application/json` by itself for plain
 // object bodies, and a default here would BREAK file uploads: seeing
@@ -51,17 +53,14 @@ api.interceptors.response.use(
 )
 
 export async function fetchHealth(): Promise<Health> {
-  const { data } = await api.get('/health')
+  const { data } = await api.get('/api/health')
   return healthSchema.parse(data)
 }
 
-// Turns an API path like "/uploads/x.jpg" into something the browser can load.
-//
-// The API is on a different origin from the page (5173 in dev, 3000 for the
-// API), so a relative path would be fetched from VITE_API_BASE_URL's absence —
-// that is, from the dev server, which answers unknown paths with index.html.
-// The result is a 200 with text/html where an image was expected, so the
-// picture silently fails to render. Absolute URLs are left alone.
+// Turns an API path like "/api/crumbs/<id>/image" into something the browser
+// can load. In development the API is on a different port; in production the
+// host proxies /api to the backend, so the base URL is empty. Absolute URLs
+// are left alone.
 export function assetUrl(path: string | null | undefined): string | undefined {
   if (!path) return undefined
 
